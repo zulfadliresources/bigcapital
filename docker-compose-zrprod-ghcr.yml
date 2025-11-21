@@ -11,9 +11,8 @@ services:
     restart: on-failure
     networks:
       - bigcapital_network
+    entrypoint: ["/bin/sh", "-c"]
     command:
-      - /bin/sh
-      - -c
       - |
         cat > /etc/envoy/envoy.yaml << 'EOF'
         static_resources:
