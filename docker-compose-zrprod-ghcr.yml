@@ -1,0 +1,338 @@
+services:
+  proxy:
+    image: envoyproxy/envoy:v1.30-latest
+    depends_on:
+      - server
+      - webapp
+    ports:
+      - '${PUBLIC_PROXY_PORT:-8080}:80'
+      - '${PUBLIC_PROXY_SSL_PORT:-8443}:443'
+    tty: true
+    volumes:
+    # using terminal
+      - ./docker/envoy/envoy.yaml:/etc/envoy/envoy.yaml
+    # for portainer macos. do not delete
+      # - /Users/zrm/Documents/GitHub/bigcapital/docker/envoy/envoy.yaml:/etc/envoy/envoy.yaml
+    restart: on-failure
+    networks:
+      - bigcapital_network
+
+  webapp:
+    container_name: bigcapital-webapp
+    image: ghcr.io/bigcapitalhq/webapp:latest
+    restart: on-failure
+    expose:
+      - '80'
+    networks:
+      - bigcapital_network
+
+  server:
+    container_name: bigcapital-server
+    image: ghcr.io/bigcapitalhq/server:latest
+    restart: on-failure
+    expose:
+      - '3000'
+    links:
+      - mongo
+      - mysql
+      - redis
+    depends_on:
+      - mongo
+      - mysql
+      - redis
+      - mysql_permissions
+    networks:
+      - bigcapital_network
+    environment:
+      # Mail
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_SECURE=${MAIL_SECURE}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+
+      # Database
+      - DB_HOST=mysql
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_CHARSET=${DB_CHARSET}
+
+      # Redis
+      - REDIS_HOST=redis
+
+      # System database
+      - SYSTEM_DB_NAME=${SYSTEM_DB_NAME}
+
+      # Tenants databases
+      - TENANT_DB_NAME_PERFIX=${TENANT_DB_NAME_PREFIX}
+
+      # Authentication
+      - JWT_SECRET=${JWT_SECRET}
+
+      # MongoDB
+      - MONGODB_DATABASE_URL=mongodb://mongo/bigcapital
+
+      # Application
+      - BASE_URL=${BASE_URL}
+
+      # Agendash
+      - AGENDASH_AUTH_USER=${AGENDASH_AUTH_USER}
+      - AGENDASH_AUTH_PASSWORD=${AGENDASH_AUTH_PASSWORD}
+
+      # Sign-up restrictions
+      - SIGNUP_DISABLED=${SIGNUP_DISABLED}
+      - SIGNUP_ALLOWED_DOMAINS=${SIGNUP_ALLOWED_DOMAINS}
+      - SIGNUP_ALLOWED_EMAILS=${SIGNUP_ALLOWED_EMAILS}
+
+      # Sign-up email confirmation
+      - SIGNUP_EMAIL_CONFIRMATION=${SIGNUP_EMAIL_CONFIRMATION}
+
+      # Gotenberg (Pdf generator)
+      - GOTENBERG_URL=${GOTENBERG_URL}
+      - GOTENBERG_DOCS_URL=${GOTENBERG_DOCS_URL}
+
+      # Exchange Rate
+      - EXCHANGE_RATE_SERVICE=${EXCHANGE_RATE_SERVICE}
+      - OPEN_EXCHANGE_RATE_APP_ID=${OPEN_EXCHANGE_RATE_APP_ID}
+
+      # Bank Sync
+      - BANK_FEED_ENABLED=${BANK_FEED_ENABLED}
+
+      # Plaid
+      - PLAID_ENV=${PLAID_ENV}
+      - PLAID_CLIENT_ID=${PLAID_CLIENT_ID}
+      - PLAID_SECRET=${PLAID_SECRET}
+      - PLAID_LINK_WEBHOOK=${PLAID_LINK_WEBHOOK}
+
+      # Lemon Squeez
+      - LEMONSQUEEZY_API_KEY=${LEMONSQUEEZY_API_KEY}
+      - LEMONSQUEEZY_STORE_ID=${LEMONSQUEEZY_STORE_ID}
+      - LEMONSQUEEZY_WEBHOOK_SECRET=${LEMONSQUEEZY_WEBHOOK_SECRET}
+      - HOSTED_ON_BIGCAPITAL_CLOUD=${HOSTED_ON_BIGCAPITAL_CLOUD}
+
+      # New Relic matrics tracking.
+      - NEW_RELIC_DISTRIBUTED_TRACING_ENABLED=${NEW_RELIC_DISTRIBUTED_TRACING_ENABLED}
+      - NEW_RELIC_LOG=${NEW_RELIC_LOG}
+      - NEW_RELIC_AI_MONITORING_ENABLED=${NEW_RELIC_AI_MONITORING_ENABLED}
+      - NEW_RELIC_CUSTOM_INSIGHTS_EVENTS_MAX_SAMPLES_STORED=${NEW_RELIC_CUSTOM_INSIGHTS_EVENTS_MAX_SAMPLES_STORED}
+      - NEW_RELIC_SPAN_EVENTS_MAX_SAMPLES_STORED=${NEW_RELIC_SPAN_EVENTS_MAX_SAMPLES_STORED}
+      - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
+      - NEW_RELIC_APP_NAME=${NEW_RELIC_APP_NAME}
+
+      # S3
+      - S3_REGION=${S3_REGION}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_BUCKET=${S3_BUCKET}
+      
+      # Stripe
+      - STRIPE_PAYMENT_SECRET_KEY=${STRIPE_PAYMENT_SECRET_KEY}
+      - STRIPE_PAYMENT_PUBLISHABLE_KEY=${STRIPE_PAYMENT_PUBLISHABLE_KEY}
+      - STRIPE_PAYMENT_CLIENT_ID=${STRIPE_PAYMENT_CLIENT_ID}
+      - STRIPE_PAYMENT_WEBHOOKS_SECRET=${STRIPE_PAYMENT_WEBHOOKS_SECRET}
+      - STRIPE_PAYMENT_REDIRECT_URL=${STRIPE_PAYMENT_REDIRECT_URL}
+
+  mysql_permissions:
+    container_name: bigcapital-mysql-permissions
+    image: mariadb:10.11
+    depends_on:
+      - mysql
+    networks:
+      - bigcapital_network
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for MySQL to be ready..."
+        until mysqladmin ping -h mysql -u root -p$${MYSQL_ROOT_PASSWORD} --silent 2>/dev/null; do
+          sleep 2
+        done
+        echo "Configuring database permissions..."
+        mysql -h mysql -u root -p$${MYSQL_ROOT_PASSWORD} <<EOF
+        GRANT CREATE ON *.* TO '$${DB_USER}'@'%' WITH GRANT OPTION;
+        GRANT ALL PRIVILEGES ON $${SYSTEM_DB_NAME}.* TO '$${DB_USER}'@'%' WITH GRANT OPTION;
+        GRANT ALL PRIVILEGES ON \`$${TENANT_DB_NAME_PREFIX}%\`.* TO '$${DB_USER}'@'%' WITH GRANT OPTION;
+        FLUSH PRIVILEGES;
+        EOF
+        echo "✅ Database permissions configured successfully!"
+    environment:
+      - DB_USER=${DB_USER}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - SYSTEM_DB_NAME=${SYSTEM_DB_NAME}
+      - TENANT_DB_NAME_PREFIX=${TENANT_DB_NAME_PREFIX}
+    restart: "no"
+
+  database_migration:
+    container_name: bigcapital-database-migration
+    build:
+      context: ./
+      dockerfile: docker/migration/Dockerfile
+    environment:
+      # Database
+      - DB_HOST=mysql
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_CHARSET=${DB_CHARSET}
+      - SYSTEM_DB_NAME=${SYSTEM_DB_NAME}
+      # Tenants databases
+      - TENANT_DB_NAME_PERFIX=${TENANT_DB_NAME_PREFIX}
+    depends_on:
+      - mysql
+      - mysql_permissions
+    networks:
+      - bigcapital_network
+
+  mongo:
+    container_name: bigcapital-mongo
+    image: mongo:latest
+    restart: on-failure
+    expose:
+      - '27017'
+    volumes:
+      - mongo:/var/lib/mongodb
+    networks:
+      - bigcapital_network
+
+  redis:
+    container_name: bigcapital-redis
+    image: redis:7-alpine
+    restart: on-failure
+    expose:
+      - '6379'
+    networks:
+      - bigcapital_network
+
+  mysql:
+    container_name: bigcapital-mysql
+    image: mariadb:10.11
+    restart: on-failure
+    environment:
+      - MYSQL_DATABASE=${SYSTEM_DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+    expose:
+      - '3306'
+    volumes:
+      - mysql:/var/lib/mysql
+    networks:
+      - bigcapital_network
+
+  gotenberg:
+    image: gotenberg/gotenberg:7
+    expose:
+      - '9003'
+    networks:
+      - bigcapital_network
+
+  phpmyadmin:
+    container_name: bigcapital-phpmyadmin
+    image: phpmyadmin/phpmyadmin:latest
+    restart: on-failure
+    ports:
+      - '${PHPMYADMIN_PORT:-8081}:80'
+    environment:
+      - PMA_HOST=mysql
+      - PMA_PORT=3306
+      - PMA_USER=${DB_USER}
+      - PMA_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - mysql
+    networks:
+      - bigcapital_network
+
+  backup:
+    container_name: bigcapital-backup
+    image: ubuntu:22.04
+    restart: unless-stopped
+    depends_on:
+      - mysql
+      - mongo
+    networks:
+      - bigcapital_network
+    volumes:
+      - backup_data:/backups
+      - ./backups:/host-backups
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - BACKUP_RETENTION_DAYS=7
+      - BACKUP_SCHEDULE=0 2 * * *
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # Install required packages
+        apt-get update && apt-get install -y cron mysql-client docker.io && rm -rf /var/lib/apt/lists/*
+        
+        # Create backup script
+        cat > /usr/local/bin/backup.sh << 'BACKUP_SCRIPT'
+        #!/bin/bash
+        BACKUP_DIR="/backups"
+        TIMESTAMP=$$(date +"%Y%m%d_%H%M%S")
+        LOG_FILE="$$BACKUP_DIR/backup_$$(date +%Y%m%d).log"
+        
+        log() { echo "[$$(date +'%Y-%m-%d %H:%M:%S')] $$1" | tee -a "$$LOG_FILE"; }
+        
+        # MySQL Backup
+        log "Starting MySQL backup..."
+        DATABASES=$$(mysql -hmysql -u$$DB_USER -p$$DB_PASSWORD -e "SHOW DATABASES;" 2>/dev/null | grep -Ev "(Database|information_schema|performance_schema|mysql|sys)")
+        if [ ! -z "$$DATABASES" ]; then
+          mysqldump -hmysql -u$$DB_USER -p$$DB_PASSWORD --single-transaction --routines --triggers --events --databases $$DATABASES 2>/dev/null | gzip > "$$BACKUP_DIR/mysql_$$TIMESTAMP.sql.gz"
+          cp "$$BACKUP_DIR/mysql_$$TIMESTAMP.sql.gz" /host-backups/ 2>/dev/null || true
+          log "MySQL backup completed: mysql_$$TIMESTAMP.sql.gz ($$(du -h $$BACKUP_DIR/mysql_$$TIMESTAMP.sql.gz | cut -f1))"
+        fi
+        
+        # MongoDB Backup
+        log "Starting MongoDB backup..."
+        docker exec bigcapital-mongo mongodump --db=bigcapital --archive --gzip 2>/dev/null > "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz"
+        cp "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz" /host-backups/ 2>/dev/null || true
+        log "MongoDB backup completed: mongo_$$TIMESTAMP.archive.gz ($$(du -h $$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz | cut -f1))"
+        
+        # Cleanup old backups
+        log "Cleaning up backups older than $$BACKUP_RETENTION_DAYS days..."
+        find $$BACKUP_DIR -name "mysql_*.sql.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete
+        find $$BACKUP_DIR -name "mongo_*.archive.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete
+        find /host-backups -name "mysql_*.sql.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete 2>/dev/null || true
+        find /host-backups -name "mongo_*.archive.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete 2>/dev/null || true
+        log "Backup completed. Total files: $$(ls -1 $$BACKUP_DIR/*.gz 2>/dev/null | wc -l)"
+        BACKUP_SCRIPT
+        
+        chmod +x /usr/local/bin/backup.sh
+        
+        # Setup cron job
+        echo "$$BACKUP_SCHEDULE /usr/local/bin/backup.sh >> /backups/cron.log 2>&1" > /etc/cron.d/backup-cron
+        chmod 0644 /etc/cron.d/backup-cron
+        crontab /etc/cron.d/backup-cron
+        
+        echo "✅ Backup service started!"
+        echo "Schedule: $$BACKUP_SCHEDULE (daily at 2 AM)"
+        echo "Backups stored: /backups (volume) and ./backups (host)"
+        echo "Retention: $$BACKUP_RETENTION_DAYS days"
+        echo ""
+        echo "Run manual backup: docker exec bigcapital-backup /usr/local/bin/backup.sh"
+        echo "View backups: ls -lh ./backups/"
+        
+        # Keep container running and show cron logs
+        touch /backups/cron.log
+        cron && tail -f /backups/cron.log
+
+# Volumes
+volumes:
+  mongo:
+    name: bigcapital_prod_mongo
+    driver: local
+  mysql:
+    name: bigcapital_prod_mysql
+    driver: local
+  backup_data:
+    name: bigcapital_prod_backups
+    driver: local
+
+# Networks
+networks:
+  bigcapital_network:
+    driver: bridge

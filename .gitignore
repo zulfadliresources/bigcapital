@@ -6,5 +6,8 @@ node_modules/
 # Production env file 
 .env
 
+# Backup files
+/backups
+
 test-results/
 .qodo
