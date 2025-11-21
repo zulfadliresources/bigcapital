@@ -294,18 +294,21 @@ services:
     container_name: bigcapital-phpmyadmin
     image: phpmyadmin/phpmyadmin:latest
     restart: on-failure
-    # Security: Remove port mapping on production - use SSH tunnel instead
-    # ports:
-    #   - '${PHPMYADMIN_PORT:-8081}:80'
+    # Local development: Accessible on localhost:8081
+    # VPS production: Use docker-compose-zrprod-ghcr.vps.yml override (SSH tunnel only)
+    ports:
+      - '127.0.0.1:${PHPMYADMIN_PORT:-8081}:80'
     expose:
       - '80'
     environment:
       - PMA_HOST=mysql
       - PMA_PORT=3306
+      # Local dev: Auto-login with env credentials
       - PMA_USER=${DB_USER}
       - PMA_PASSWORD=${DB_PASSWORD}
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
-      # Add basic auth for extra security
+      - UPLOAD_LIMIT=100M
+      - MEMORY_LIMIT=512M
       - PMA_ABSOLUTE_URI=http://localhost:8081/
     depends_on:
       - mysql
