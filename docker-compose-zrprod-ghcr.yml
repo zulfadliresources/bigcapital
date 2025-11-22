@@ -14,10 +14,16 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
+        # Generate self-signed SSL certificate for local development
+        apk add --no-cache openssl
+        mkdir -p /etc/envoy/certs
+        openssl req -x509 -newkey rsa:4096 -keyout /etc/envoy/certs/key.pem -out /etc/envoy/certs/cert.pem -days 365 -nodes -subj "/CN=localhost"
+        
         cat > /etc/envoy/envoy.yaml << 'EOF'
         static_resources:
           listeners:
-            - name: listener_0
+            # HTTP Listener (port 80)
+            - name: listener_http
               address:
                 socket_address:
                   address: 0.0.0.0
@@ -46,6 +52,47 @@ services:
                           - name: envoy.filters.http.router
                             typed_config:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            
+            # HTTPS Listener (port 443)
+            - name: listener_https
+              address:
+                socket_address:
+                  address: 0.0.0.0
+                  port_value: 443
+              filter_chains:
+                - filters:
+                    - name: envoy.filters.network.http_connection_manager
+                      typed_config:
+                        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                        stat_prefix: ingress_https
+                        route_config:
+                          name: local_route_https
+                          virtual_hosts:
+                            - name: backend_https
+                              domains: ['*']
+                              routes:
+                                - match:
+                                    prefix: '/api'
+                                  route:
+                                    cluster: dynamic_server
+                                - match:
+                                    prefix: '/'
+                                  route:
+                                    cluster: webapp
+                        http_filters:
+                          - name: envoy.filters.http.router
+                            typed_config:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  transport_socket:
+                    name: envoy.transport_sockets.tls
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+                      common_tls_context:
+                        tls_certificates:
+                          - certificate_chain:
+                              filename: "/etc/envoy/certs/cert.pem"
+                            private_key:
+                              filename: "/etc/envoy/certs/key.pem"
 
           clusters:
             - name: dynamic_server
