@@ -4,9 +4,11 @@ services:
     depends_on:
       - server
       - webapp
+      - phpmyadmin
     ports:
       - '${PUBLIC_PROXY_PORT:-8080}:80'
       - '${PUBLIC_PROXY_SSL_PORT:-8443}:443'
+      - '127.0.0.1:44381:44381'
     tty: true
     restart: on-failure
     networks:
@@ -41,6 +43,11 @@ services:
                               domains: ['*']
                               routes:
                                 - match:
+                                    prefix: '/phpmyadmin'
+                                  route:
+                                    cluster: phpmyadmin
+                                    prefix_rewrite: '/'
+                                - match:
                                     prefix: '/api'
                                   route:
                                     cluster: dynamic_server
@@ -72,6 +79,11 @@ services:
                               domains: ['*']
                               routes:
                                 - match:
+                                    prefix: '/phpmyadmin'
+                                  route:
+                                    cluster: phpmyadmin
+                                    prefix_rewrite: '/'
+                                - match:
                                     prefix: '/api'
                                   route:
                                     cluster: dynamic_server
@@ -79,6 +91,43 @@ services:
                                     prefix: '/'
                                   route:
                                     cluster: webapp
+                        http_filters:
+                          - name: envoy.filters.http.router
+                            typed_config:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  transport_socket:
+                    name: envoy.transport_sockets.tls
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+                      common_tls_context:
+                        tls_certificates:
+                          - certificate_chain:
+                              filename: "/etc/envoy/certs/cert.pem"
+                            private_key:
+                              filename: "/etc/envoy/certs/key.pem"
+            
+            # HTTPS Listener for phpMyAdmin (port 44381)
+            - name: listener_phpmyadmin_https
+              address:
+                socket_address:
+                  address: 0.0.0.0
+                  port_value: 44381
+              filter_chains:
+                - filters:
+                    - name: envoy.filters.network.http_connection_manager
+                      typed_config:
+                        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                        stat_prefix: ingress_phpmyadmin_https
+                        route_config:
+                          name: phpmyadmin_route
+                          virtual_hosts:
+                            - name: phpmyadmin_backend
+                              domains: ['*']
+                              routes:
+                                - match:
+                                    prefix: '/'
+                                  route:
+                                    cluster: phpmyadmin
                         http_filters:
                           - name: envoy.filters.http.router
                             typed_config:
@@ -123,6 +172,21 @@ services:
                           address:
                             socket_address:
                               address: webapp
+                              port_value: 80
+
+            - name: phpmyadmin
+              connect_timeout: 0.25s
+              type: STRICT_DNS
+              dns_lookup_family: V4_ONLY
+              lb_policy: ROUND_ROBIN
+              load_assignment:
+                cluster_name: phpmyadmin
+                endpoints:
+                  - lb_endpoints:
+                      - endpoint:
+                          address:
+                            socket_address:
+                              address: phpmyadmin
                               port_value: 80
         EOF
         envoy -c /etc/envoy/envoy.yaml
@@ -264,6 +328,7 @@ services:
         GRANT CREATE ON *.* TO '$${DB_USER}'@'%' WITH GRANT OPTION;
         GRANT ALL PRIVILEGES ON $${SYSTEM_DB_NAME}.* TO '$${DB_USER}'@'%' WITH GRANT OPTION;
         GRANT ALL PRIVILEGES ON \`$${TENANT_DB_NAME_PREFIX}%\`.* TO '$${DB_USER}'@'%' WITH GRANT OPTION;
+        GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '$${MYSQL_ROOT_PASSWORD}';
         FLUSH PRIVILEGES;
         EOF
         echo "✅ Database permissions configured successfully!"
@@ -341,22 +406,23 @@ services:
     container_name: bigcapital-phpmyadmin
     image: phpmyadmin/phpmyadmin:latest
     restart: on-failure
-    # Local development: Accessible on localhost:8081
-    # VPS production: Use docker-compose-zrprod-ghcr.vps.yml override (SSH tunnel only)
+    # Direct access: 
+    # - http://localhost:8081 (HTTP)
+    # - https://localhost:44381 (HTTPS via proxy)
+    # VPS production: Use docker-compose-zrprod-ghcr.vps.yml override (SSH tunnel or proxy access)
     ports:
-      - '127.0.0.1:${PHPMYADMIN_PORT:-8081}:80'
+      - "127.0.0.1:8081:80"
     expose:
       - '80'
     environment:
       - PMA_HOST=mysql
       - PMA_PORT=3306
       # Local dev: Auto-login with env credentials
+      # - PMA_USER=root
       - PMA_USER=${DB_USER}
       - PMA_PASSWORD=${DB_PASSWORD}
-      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
       - UPLOAD_LIMIT=100M
       - MEMORY_LIMIT=512M
-      - PMA_ABSOLUTE_URI=http://localhost:8081/
     depends_on:
       - mysql
     networks:
