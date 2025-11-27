@@ -14,3 +14,9 @@ services:
       - MEMORY_LIMIT=512M
       # Update for your production domain
       - PMA_ABSOLUTE_URI=${BASE_URL}/phpmyadmin/
+
+  backup:
+    volumes:
+      - backup_data:/backups
+      - /opt/backups/bigcapital:/host-backups
+      - /var/run/docker.sock:/var/run/docker.sock:ro
