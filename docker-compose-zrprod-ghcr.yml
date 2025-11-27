@@ -445,7 +445,7 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - BACKUP_RETENTION_DAYS=7
-      - BACKUP_SCHEDULE=0 2 * * *
+      - BACKUP_SCHEDULE=17 * * * *
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -499,7 +499,7 @@ services:
         crontab /etc/cron.d/backup-cron
         
         echo "✅ Backup service started!"
-        echo "Schedule: $$BACKUP_SCHEDULE (daily at 2 AM)"
+        echo "Schedule: $$BACKUP_SCHEDULE (hourly at :17)"
         echo "Backups stored: /backups (volume) and ./backups (host)"
         echo "Retention: $$BACKUP_RETENTION_DAYS days"
         echo ""
