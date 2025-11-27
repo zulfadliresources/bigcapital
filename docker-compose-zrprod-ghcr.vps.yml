@@ -20,3 +20,4 @@ services:
       - backup_data:/backups
       - /opt/backups/bigcapital:/host-backups
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./backups:/repo-backups:ro
