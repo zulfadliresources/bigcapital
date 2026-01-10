@@ -1,15 +1,15 @@
-version: '3.8'
-
 services:
   server:
     container_name: bigcapital-server-local
-    image: bigcapitalhq/server:latest
+    build: ./packages/server
+    # image: bigcapitalhq/server:latest
+    # image: ghcr.io/bigcapitalhq/server:latest
     env_file:
       - .env.zr.local
     ports:
       - '3001:3000'
     expose:
-      - '3001'
+      - '3000'
     depends_on:
       - mongo
       - gotenberg
@@ -20,7 +20,9 @@ services:
 
   webapp:
     container_name: bigcapital-webapp-local
-    image: bigcapitalhq/webapp:latest
+    build: ./packages/webapp
+    # image: bigcapitalhq/webapp:latest
+    # image: ghcr.io/bigcapitalhq/webapp:latest
     ports:
       - '8080:80'
     depends_on:
@@ -57,7 +59,7 @@ services:
   gotenberg:
     image: gotenberg/gotenberg:7
     expose:
-      - '9003'
+      - '3000'
     ports:
       - '9003:3000'
     networks:

@@ -7,6 +7,10 @@
 ```bash
 # Start all services
 docker-compose -f docker-compose-zrprod-ghcr.yml up -d
+# 
+docker-compose -f docker-compose.zr.local.yml down
+docker-compose -f docker-compose.zr.local.yml up -d --pull always
+docker-compose -f docker-compose.zr.local.yml up -d
 
 # Access BigCapital
 http://localhost:8080
