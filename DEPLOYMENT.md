@@ -112,20 +112,58 @@ MAIL_PASSWORD=your-app-password
 
 ## Backup Service
 
-Automated daily backups at 2 AM:
+Automated daily backups at 2:17 AM (cron schedule: `17 * * * *`):
 
 ```bash
 # Manual backup
-docker exec bigcapital-backup /backup.sh
+docker exec bigcapital-backup /usr/local/bin/backup.sh
 
 # Check backup logs
 docker logs bigcapital-backup
 
-# Backups location (inside container)
-/backups/backup-YYYY-MM-DD_HH-MM-SS.tar.gz
+# View cron logs
+docker exec bigcapital-backup tail -f /backups/cron.log
 ```
 
-Retention: 7 days
+**Backup Locations:**
+- Inside container: `/backups/` (MySQL `.sql.gz` and MongoDB `.archive.gz` files)
+- Host: `./backups/` (automatically copied from container)
+
+**Backup Files:**
+- MySQL: `mysql_YYYYMMDD_HHMMSS.sql.gz` (contains all databases)
+- MongoDB: `mongo_YYYYMMDD_HHMMSS.archive.gz` (bigcapital database)
+
+Retention: 7 days (old backups auto-deleted)
+
+---
+
+## Restore Backups
+
+### Restore MySQL Backup
+
+Use the provided restore script (requires confirmation):
+
+```bash
+# From the backups directory
+cd backups
+./restore_mysql.sh mysql_YYYYMMDD_HHMMSS.sql.gz
+```
+
+Or restore directly via container:
+
+```bash
+# Restore latest MySQL backup
+docker exec bigcapital-backup sh -c "gunzip -c /host-backups/mysql_$(ls -t /host-backups/mysql_*.sql.gz | head -1 | xargs basename) | mysql -hmysql -u$DB_USER -p$DB_PASSWORD"
+```
+
+### Restore MongoDB Backup
+
+```bash
+# Restore latest MongoDB backup
+docker exec bigcapital-mongo mongorestore --archive=/host-backups/$(ls -t /host-backups/mongo_*.archive.gz | head -1 | xargs basename) --db=bigcapital --drop
+```
+
+**Note:** Restoring will overwrite existing data. Always backup current data first if needed.
 
 ---
 

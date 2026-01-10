@@ -5,6 +5,7 @@ node_modules/
 
 # Production env file 
 .env
+.env.zr.local
 
 # Backup files
 /backups/*.sql.gz
