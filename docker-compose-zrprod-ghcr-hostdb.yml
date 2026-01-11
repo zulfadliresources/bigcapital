@@ -1,0 +1,366 @@
+services:
+  proxy:
+    image: envoyproxy/envoy:v1.30-latest
+    depends_on:
+      - server
+      - webapp
+    ports:
+      - '${PUBLIC_PROXY_PORT:-8080}:80'
+      - '${PUBLIC_PROXY_SSL_PORT:-8443}:443'
+    tty: true
+    restart: on-failure
+    networks:
+      - bigcapital_network
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # Generate self-signed SSL certificate for local development
+        apk add --no-cache openssl
+        mkdir -p /etc/envoy/certs
+        openssl req -x509 -newkey rsa:4096 -keyout /etc/envoy/certs/key.pem -out /etc/envoy/certs/cert.pem -days 365 -nodes -subj "/CN=localhost"
+        
+        cat > /etc/envoy/envoy.yaml << 'EOF'
+        static_resources:
+          listeners:
+            # HTTP Listener (port 80)
+            - name: listener_http
+              address:
+                socket_address:
+                  address: 0.0.0.0
+                  port_value: 80
+              filter_chains:
+                - filters:
+                    - name: envoy.filters.network.http_connection_manager
+                      typed_config:
+                        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                        stat_prefix: ingress_http
+                        route_config:
+                          name: local_route
+                          virtual_hosts:
+                            - name: backend
+                              domains: ['*']
+                              routes:
+                                - match:
+                                    prefix: '/api'
+                                  route:
+                                    cluster: dynamic_server
+                                - match:
+                                    prefix: '/'
+                                  route:
+                                    cluster: webapp
+                        http_filters:
+                          - name: envoy.filters.http.router
+                            typed_config:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            
+            # HTTPS Listener (port 443)
+            - name: listener_https
+              address:
+                socket_address:
+                  address: 0.0.0.0
+                  port_value: 443
+              filter_chains:
+                - filters:
+                    - name: envoy.filters.network.http_connection_manager
+                      typed_config:
+                        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                        stat_prefix: ingress_https
+                        route_config:
+                          name: local_route_https
+                          virtual_hosts:
+                            - name: backend_https
+                              domains: ['*']
+                              routes:
+                                - match:
+                                    prefix: '/api'
+                                  route:
+                                    cluster: dynamic_server
+                                - match:
+                                    prefix: '/'
+                                  route:
+                                    cluster: webapp
+                        http_filters:
+                          - name: envoy.filters.http.router
+                            typed_config:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  transport_socket:
+                    name: envoy.transport_sockets.tls
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+                      common_tls_context:
+                        tls_certificates:
+                          - certificate_chain:
+                              filename: "/etc/envoy/certs/cert.pem"
+                            private_key:
+                              filename: "/etc/envoy/certs/key.pem"
+
+          clusters:
+            - name: dynamic_server
+              connect_timeout: 0.25s
+              type: STRICT_DNS
+              dns_lookup_family: V4_ONLY
+              lb_policy: ROUND_ROBIN
+              load_assignment:
+                cluster_name: dynamic_server
+                endpoints:
+                  - lb_endpoints:
+                      - endpoint:
+                          address:
+                            socket_address:
+                              address: server
+                              port_value: 3000
+
+            - name: webapp
+              connect_timeout: 0.25s
+              type: STRICT_DNS
+              dns_lookup_family: V4_ONLY
+              lb_policy: ROUND_ROBIN
+              load_assignment:
+                cluster_name: webapp
+                endpoints:
+                  - lb_endpoints:
+                      - endpoint:
+                          address:
+                            socket_address:
+                              address: webapp
+                              port_value: 80
+        EOF
+        envoy -c /etc/envoy/envoy.yaml
+
+  webapp:
+    container_name: bigcapital-webapp
+    image: ghcr.io/bigcapitalhq/webapp:latest
+    restart: on-failure
+    expose:
+      - '80'
+    networks:
+      - bigcapital_network
+
+  server:
+    container_name: bigcapital-server
+    image: ghcr.io/bigcapitalhq/server:latest
+    restart: on-failure
+    expose:
+      - '3000'
+    links:
+      - mongo
+    depends_on:
+      - mongo
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - bigcapital_network
+    environment:
+      # Mail
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_SECURE=${MAIL_SECURE}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+
+      # Database
+      - DB_HOST=host.docker.internal
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_CHARSET=${DB_CHARSET}
+
+      # Redis
+      - REDIS_HOST=host.docker.internal
+
+      # System database
+      - SYSTEM_DB_NAME=${SYSTEM_DB_NAME}
+
+      # Tenants databases
+      - TENANT_DB_NAME_PERFIX=${TENANT_DB_NAME_PREFIX}
+
+      # Authentication
+      - JWT_SECRET=${JWT_SECRET}
+
+      # MongoDB
+      - MONGODB_DATABASE_URL=mongodb://mongo/bigcapital
+
+      # Application
+      - BASE_URL=${BASE_URL}
+
+      # Agendash
+      - AGENDASH_AUTH_USER=${AGENDASH_AUTH_USER}
+      - AGENDASH_AUTH_PASSWORD=${AGENDASH_AUTH_PASSWORD}
+
+      # Sign-up restrictions
+      - SIGNUP_DISABLED=${SIGNUP_DISABLED}
+      - SIGNUP_ALLOWED_DOMAINS=${SIGNUP_ALLOWED_DOMAINS}
+      - SIGNUP_ALLOWED_EMAILS=${SIGNUP_ALLOWED_EMAILS}
+
+      # Sign-up email confirmation
+      - SIGNUP_EMAIL_CONFIRMATION=${SIGNUP_EMAIL_CONFIRMATION}
+
+      # Gotenberg (Pdf generator)
+      - GOTENBERG_URL=${GOTENBERG_URL}
+      - GOTENBERG_DOCS_URL=${GOTENBERG_DOCS_URL}
+
+      # Exchange Rate
+      - EXCHANGE_RATE_SERVICE=${EXCHANGE_RATE_SERVICE}
+      - OPEN_EXCHANGE_RATE_APP_ID=${OPEN_EXCHANGE_RATE_APP_ID}
+
+      # Bank Sync
+      - BANK_FEED_ENABLED=${BANK_FEED_ENABLED}
+
+      # Plaid
+      - PLAID_ENV=${PLAID_ENV}
+      - PLAID_CLIENT_ID=${PLAID_CLIENT_ID}
+      - PLAID_SECRET=${PLAID_SECRET}
+      - PLAID_LINK_WEBHOOK=${PLAID_LINK_WEBHOOK}
+
+      # Lemon Squeez
+      - LEMONSQUEEZY_API_KEY=${LEMONSQUEEZY_API_KEY}
+      - LEMONSQUEEZY_STORE_ID=${LEMONSQUEEZY_STORE_ID}
+      - LEMONSQUEEZY_WEBHOOK_SECRET=${LEMONSQUEEZY_WEBHOOK_SECRET}
+      - HOSTED_ON_BIGCAPITAL_CLOUD=${HOSTED_ON_BIGCAPITAL_CLOUD}
+
+      # New Relic matrics tracking.
+      - NEW_RELIC_DISTRIBUTED_TRACING_ENABLED=${NEW_RELIC_DISTRIBUTED_TRACING_ENABLED}
+      - NEW_RELIC_LOG=${NEW_RELIC_LOG}
+      - NEW_RELIC_AI_MONITORING_ENABLED=${NEW_RELIC_AI_MONITORING_ENABLED}
+      - NEW_RELIC_CUSTOM_INSIGHTS_EVENTS_MAX_SAMPLES_STORED=${NEW_RELIC_CUSTOM_INSIGHTS_EVENTS_MAX_SAMPLES_STORED}
+      - NEW_RELIC_SPAN_EVENTS_MAX_SAMPLES_STORED=${NEW_RELIC_SPAN_EVENTS_MAX_SAMPLES_STORED}
+      - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
+      - NEW_RELIC_APP_NAME=${NEW_RELIC_APP_NAME}
+
+      # S3
+      - S3_REGION=${S3_REGION}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_BUCKET=${S3_BUCKET}
+      
+      # Stripe
+      - STRIPE_PAYMENT_SECRET_KEY=${STRIPE_PAYMENT_SECRET_KEY}
+      - STRIPE_PAYMENT_PUBLISHABLE_KEY=${STRIPE_PAYMENT_PUBLISHABLE_KEY}
+      - STRIPE_PAYMENT_CLIENT_ID=${STRIPE_PAYMENT_CLIENT_ID}
+      - STRIPE_PAYMENT_WEBHOOKS_SECRET=${STRIPE_PAYMENT_WEBHOOKS_SECRET}
+      - STRIPE_PAYMENT_REDIRECT_URL=${STRIPE_PAYMENT_REDIRECT_URL}
+
+  database_migration:
+    container_name: bigcapital-database-migration
+    build:
+      context: ./
+      dockerfile: docker/migration/Dockerfile
+    environment:
+      # Database
+      - DB_HOST=host.docker.internal
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_CHARSET=${DB_CHARSET}
+      - SYSTEM_DB_NAME=${SYSTEM_DB_NAME}
+      # Tenants databases
+      - TENANT_DB_NAME_PERFIX=${TENANT_DB_NAME_PREFIX}
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - bigcapital_network
+
+  mongo:
+    container_name: bigcapital-mongo
+    image: mongo:latest
+    restart: on-failure
+    expose:
+      - '27017'
+    volumes:
+      - mongo:/var/lib/mongodb
+    networks:
+      - bigcapital_network
+
+  gotenberg:
+    image: gotenberg/gotenberg:7
+    expose:
+      - '9003'
+    networks:
+      - bigcapital_network
+
+  backup:
+    container_name: bigcapital-backup
+    image: ubuntu:22.04
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - bigcapital_network
+    volumes:
+      - backup_data:/backups
+      - ./backups:/host-backups
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - BACKUP_RETENTION_DAYS=7
+      - BACKUP_SCHEDULE=17 * * * *
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # Install required packages
+        apt-get update && apt-get install -y cron mysql-client docker.io && rm -rf /var/lib/apt/lists/*
+        
+        # Copy manual backup scripts from repo if they exist
+        if [ -d "/repo-backups" ]; then
+          cp /repo-backups/*.sh /host-backups/ 2>/dev/null || true
+          chmod +x /host-backups/*.sh 2>/dev/null || true
+        fi
+        
+        # Create backup script
+        cat > /usr/local/bin/backup.sh << 'BACKUP_SCRIPT'
+        #!/bin/bash
+        BACKUP_DIR="/backups"
+        TIMESTAMP=$$(date +"%Y%m%d_%H%M%S")
+        LOG_FILE="$$BACKUP_DIR/backup_$$(date +%Y%m%d).log"
+        
+        log() { echo "[$$(date +'%Y-%m-%d %H:%M:%S')] $$1" | tee -a "$$LOG_FILE"; }
+        
+        # MongoDB Backup
+        log "Starting MongoDB backup..."
+        docker exec bigcapital-mongo mongodump --db=bigcapital --archive --gzip 2>/dev/null > "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz"
+        cp "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz" /host-backups/ 2>/dev/null || true
+        log "MongoDB backup completed: mongo_$$TIMESTAMP.archive.gz ($$(du -h $$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz | cut -f1))"
+        
+        # Cleanup old backups
+        log "Cleaning up backups older than $$BACKUP_RETENTION_DAYS days..."
+        find $$BACKUP_DIR -name "mongo_*.archive.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete
+        find /host-backups -name "mongo_*.archive.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete 2>/dev/null || true
+        log "Backup completed. Total files: $$(ls -1 $$BACKUP_DIR/*.gz 2>/dev/null | wc -l)"
+        BACKUP_SCRIPT
+        
+        chmod +x /usr/local/bin/backup.sh
+        
+        # Setup cron job
+        echo "$$BACKUP_SCHEDULE /usr/local/bin/backup.sh >> /backups/cron.log 2>&1" > /etc/cron.d/backup-cron
+        chmod 0644 /etc/cron.d/backup-cron
+        crontab /etc/cron.d/backup-cron
+        
+        echo "✅ Backup service started!"
+        echo "Schedule: $$BACKUP_SCHEDULE (hourly at :17)"
+        echo "Backups stored: /backups (volume) and ./backups (host)"
+        echo "Retention: $$BACKUP_RETENTION_DAYS days"
+        echo ""
+        echo "Run manual backup: docker exec bigcapital-backup /usr/local/bin/backup.sh"
+        echo "View backups: ls -lh ./backups/"
+        
+        # Keep container running and show cron logs
+        touch /backups/cron.log
+        cron && tail -f /backups/cron.log
+
+# Volumes
+volumes:
+  mongo:
+    name: bigcapital_prod_mongo
+    driver: local
+  backup_data:
+    name: bigcapital_prod_backups
+    driver: local
+
+# Networks
+networks:
+  bigcapital_network:
+    driver: bridge

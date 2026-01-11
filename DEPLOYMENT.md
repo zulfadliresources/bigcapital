@@ -20,6 +20,11 @@ docker-compose -f docker-compose.zr.local.yml logs server --tail 20
 
 docker-compose -f docker-compose.zr.local.yml restart server
 
+# ghcr-hostdbredis
+docker-compose -f docker-compose-zrprod-ghcr-hostdb.yml --env-file .env up -d --pull always
+docker-compose -f docker-compose-zrprod-ghcr-hostdb.yml --env-file .env up -d
+docker-compose -f docker-compose-zrprod-ghcr-hostdb.yml down
+
 # Access BigCapital
 http://localhost:8080
 

@@ -1,0 +1,23 @@
+version: '3.8'
+
+# VPS Production Override
+# Usage: docker-compose -f docker-compose-zrprod-ghcr.yml -f docker-compose-zrprod-ghcr.vps.yml up -d
+
+services:
+  phpmyadmin:
+    # Remove port exposure on VPS - access via SSH tunnel only
+    ports: []
+    environment:
+      # Enable cookie authentication on VPS
+      - PMA_ARBITRARY=1
+      - UPLOAD_LIMIT=100M
+      - MEMORY_LIMIT=512M
+      # Update for your production domain
+      - PMA_ABSOLUTE_URI=${BASE_URL}/phpmyadmin/
+
+  backup:
+    volumes:
+      - backup_data:/backups
+      - /opt/backups/bigcapital:/host-backups
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./backups:/repo-backups:ro
