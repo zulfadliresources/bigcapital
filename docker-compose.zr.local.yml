@@ -1,8 +1,8 @@
 services:
   server:
     container_name: bigcapital-server-local
-    build: ./packages/server
-    # image: bigcapitalhq/server:latest
+    # build: ./packages/server
+    image: bigcapitalhq/server:latest
     # image: ghcr.io/bigcapitalhq/server:latest
     env_file:
       - .env.zr.local
@@ -20,8 +20,8 @@ services:
 
   webapp:
     container_name: bigcapital-webapp-local
-    build: ./packages/webapp
-    # image: bigcapitalhq/webapp:latest
+    # build: ./packages/webapp
+    image: bigcapitalhq/webapp:latest
     # image: ghcr.io/bigcapitalhq/webapp:latest
     ports:
       - '8080:80'
