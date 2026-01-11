@@ -5,7 +5,7 @@ import {
   manualJournalTableStateChangedFactory,
 } from '@/store/manualJournals/manualJournals.selectors';
 
-export default (mapState) => {
+export const withManualJournals = (mapState) => {
   const getJournalsTableQuery = getManualJournalsTableStateFactory();
   const manualJournalTableStateChanged =
     manualJournalTableStateChangedFactory();

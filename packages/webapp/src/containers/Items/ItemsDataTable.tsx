@@ -12,12 +12,12 @@ import {
 
 import ItemsEmptyStatus from './ItemsEmptyStatus';
 
-import withItemsActions from './withItemsActions';
-import withAlertsActions from '@/containers/Alert/withAlertActions';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
-import withDrawerActions from '@/containers/Drawer/withDrawerActions';
-import withSettings from '@/containers/Settings/withSettings';
-import withItems from './withItems';
+import { withItemsActions } from './withItemsActions';
+import { withAlertActions } from '@/containers/Alert/withAlertActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
+import { withDrawerActions } from '@/containers/Drawer/withDrawerActions';
+import { withSettings } from '@/containers/Settings/withSettings';
+import { withItems } from './withItems';
 
 import { useItemsListContext } from './ItemsListProvider';
 import { useItemsTableColumns, ItemsActionMenuList } from './components';
@@ -35,7 +35,7 @@ function ItemsDataTable({
   // #withDialogAction
   openDialog,
 
-  // #withAlertsActions
+  // #withAlertActions
   openAlert,
 
   // #withDrawerActions
@@ -173,7 +173,7 @@ function ItemsDataTable({
 
 export default compose(
   withItemsActions,
-  withAlertsActions,
+  withAlertActions,
   withDrawerActions,
   withDialogActions,
   withSettings(({ itemsSettings }) => ({

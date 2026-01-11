@@ -16,11 +16,11 @@ import { CustomersTransactionsExportMenu } from './components';
 import NumberFormatDropdown from '@/components/NumberFormatDropdown';
 
 import { useCustomersTransactionsContext } from './CustomersTransactionsProvider';
-import withCustomersTransactions from './withCustomersTransactions';
-import withCustomersTransactionsActions from './withCustomersTransactionsActions';
+import { withCustomersTransactions } from './withCustomersTransactions';
+import { withCustomersTransactionsActions } from './withCustomersTransactionsActions';
 
 import { compose, saveInvoke } from '@/utils';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
 import { DialogsName } from '@/constants/dialogs';
 
 /**
@@ -103,18 +103,6 @@ function CustomersTransactionsActionsBar({
             className={classNames(Classes.MINIMAL, 'button--filter')}
             text={<T id={'format'} />}
             icon={<Icon icon="numbers" width={23} height={16} />}
-          />
-        </Popover>
-
-        <Popover
-          // content={}
-          interactionKind={PopoverInteractionKind.CLICK}
-          position={Position.BOTTOM_LEFT}
-        >
-          <Button
-            className={classNames(Classes.MINIMAL, 'button--filter')}
-            text={<T id={'filter'} />}
-            icon={<Icon icon="filter-16" iconSize={16} />}
           />
         </Popover>
 

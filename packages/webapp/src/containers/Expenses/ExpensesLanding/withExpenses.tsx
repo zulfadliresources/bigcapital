@@ -5,7 +5,7 @@ import {
   getExpensesTableStateFactory,
 } from '@/store/expenses/expenses.selectors';
 
-export default (mapState) => {
+export const withExpenses = (mapState) => {
   const getExpensesTableState = getExpensesTableStateFactory();
   const expensesTableStateChanged = expensesTableStateChangedFactory();
 

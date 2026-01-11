@@ -8,14 +8,14 @@ import { compose } from '@/utils';
 import { usePaymentMadesListContext } from './PaymentMadesListProvider';
 import { transformPaymentViewsToTabs } from './utils';
 
-import withPaymentMade from './withPaymentMade';
-import withPaymentMadeActions from './withPaymentMadeActions';
+import { withPaymentMade } from './withPaymentMade';
+import { withPaymentMadeActions } from './withPaymentMadeActions';
 
 /**
  * Payment made views tabs.
  */
 function PaymentMadeViewTabs({
-  // #withPaymentMadesActions
+  // #withPaymentMadeActions
   setPaymentMadesTableState,
 
   // #withPaymentMade

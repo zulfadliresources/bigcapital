@@ -9,4 +9,4 @@ const mapActionsToProps = (dispatch) => ({
     dispatch(setManualJournalsTableState(queries)),
 });
 
-export default connect(null, mapActionsToProps);
+export const withManualJournalsActions = connect(null, mapActionsToProps);

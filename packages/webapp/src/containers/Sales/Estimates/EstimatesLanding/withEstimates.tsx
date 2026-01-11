@@ -5,7 +5,7 @@ import {
   isEstimatesTableStateChangedFactory,
 } from '@/store/Estimate/estimates.selectors';
 
-export default (mapState) => {
+export const withEstimates = (mapState) => {
   const getEstimatesTableState = getEstimatesTableStateFactory();
   const isEstimatesTableStateChanged = isEstimatesTableStateChangedFactory();
 

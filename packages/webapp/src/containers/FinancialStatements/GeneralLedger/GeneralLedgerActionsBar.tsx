@@ -16,9 +16,9 @@ import { GeneralLedgerSheetExportMenu } from './components';
 import { useGeneralLedgerContext } from './GeneralLedgerProvider';
 import { compose } from '@/utils';
 
-import withGeneralLedger from './withGeneralLedger';
-import withGeneralLedgerActions from './withGeneralLedgerActions';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
+import { withGeneralLedger } from './withGeneralLedger';
+import { withGeneralLedgerActions } from './withGeneralLedgerActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
 import { DialogsName } from '@/constants/dialogs';
 
 /**
@@ -75,19 +75,6 @@ function GeneralLedgerActionsBar({
           onClick={handleCustomizeClick}
           active={isFilterDrawerOpen}
         />
-        <NavbarDivider />
-
-        <Popover
-          interactionKind={PopoverInteractionKind.CLICK}
-          position={Position.BOTTOM_LEFT}
-        >
-          <Button
-            className={classNames(Classes.MINIMAL, 'button--filter')}
-            text={<T id={'filter'} />}
-            icon={<Icon icon="filter-16" iconSize={16} />}
-          />
-        </Popover>
-
         <NavbarDivider />
 
         <Button

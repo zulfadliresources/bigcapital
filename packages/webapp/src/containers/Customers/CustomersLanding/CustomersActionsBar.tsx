@@ -27,12 +27,20 @@ import { useCustomersListContext } from './CustomersListProvider';
 import { useRefreshCustomers } from '@/hooks/query/customers';
 import { useDownloadExportPdf } from '@/hooks/query/FinancialReports/use-export-pdf';
 
+<<<<<<< HEAD
 import withCustomers from './withCustomers';
 import withCustomersActions from './withCustomersActions';
 import withAlertActions from '@/containers/Alert/withAlertActions';
 import withSettingsActions from '@/containers/Settings/withSettingsActions';
 import withSettings from '@/containers/Settings/withSettings';
 import withDialogActions from '@/containers/Dialog/withDialogActions';
+=======
+import { withCustomers } from './withCustomers';
+import { withCustomersActions } from './withCustomersActions';
+import { withSettingsActions } from '@/containers/Settings/withSettingsActions';
+import { withSettings } from '@/containers/Settings/withSettings';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
+>>>>>>> develop
 
 import { CustomerAction, AbilitySubject } from '@/constants/abilityOption';
 import { compose } from '@/utils';

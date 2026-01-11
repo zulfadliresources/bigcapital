@@ -10,4 +10,4 @@ export const mapDispatchToProps = (dispatch) => ({
   resetItemsTableState: () => dispatch(resetItemsTableState()),
 });
 
-export default connect(null, mapDispatchToProps);
+export const withItemsActions = connect(null, mapDispatchToProps);

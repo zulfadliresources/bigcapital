@@ -15,9 +15,9 @@ import NumberFormatDropdown from '@/components/NumberFormatDropdown';
 import { BalanceSheetExportMenu } from './components';
 
 import { useBalanceSheetContext } from './BalanceSheetProvider';
-import withBalanceSheet from './withBalanceSheet';
-import withBalanceSheetActions from './withBalanceSheetActions';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
+import { withBalanceSheet } from './withBalanceSheet';
+import { withBalanceSheetActions } from './withBalanceSheetActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
 import { compose, saveInvoke } from '@/utils';
 import { DialogsName } from '@/constants/dialogs';
 
@@ -101,18 +101,6 @@ function BalanceSheetActionsBar({
             className={classNames(Classes.MINIMAL, 'button--filter')}
             text={<T id={'format'} />}
             icon={<Icon icon="numbers" width={23} height={16} />}
-          />
-        </Popover>
-
-        <Popover
-          // content={}
-          interactionKind={PopoverInteractionKind.CLICK}
-          position={Position.BOTTOM_LEFT}
-        >
-          <Button
-            className={classNames(Classes.MINIMAL, 'button--filter')}
-            text={<T id={'filter'} />}
-            icon={<Icon icon="filter-16" iconSize={16} />}
           />
         </Popover>
 

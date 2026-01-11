@@ -13,4 +13,4 @@ const mapDispatchToProps = (dispatch) => ({
     dispatch(resetPaymentReceivesTableState()),
 });
 
-export default connect(null, mapDispatchToProps);
+export const withPaymentsReceivedActions = connect(null, mapDispatchToProps);

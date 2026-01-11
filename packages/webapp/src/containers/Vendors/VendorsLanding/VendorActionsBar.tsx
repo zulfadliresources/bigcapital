@@ -29,11 +29,11 @@ import { useVendorsListContext } from './VendorsListProvider';
 import { useHistory } from 'react-router-dom';
 import { useDownloadExportPdf } from '@/hooks/query/FinancialReports/use-export-pdf';
 
-import withVendors from './withVendors';
-import withVendorsActions from './withVendorsActions';
-import withSettings from '@/containers/Settings/withSettings';
-import withSettingsActions from '@/containers/Settings/withSettingsActions';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
+import { withVendors } from './withVendors';
+import { withVendorsActions } from './withVendorsActions';
+import { withSettings } from '@/containers/Settings/withSettings';
+import { withSettingsActions } from '@/containers/Settings/withSettingsActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
 
 import { compose } from '@/utils';
 import { DialogsName } from '@/constants/dialogs';

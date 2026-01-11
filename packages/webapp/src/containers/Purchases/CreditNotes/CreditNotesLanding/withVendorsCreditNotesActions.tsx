@@ -12,4 +12,4 @@ const mapDispatchToProps = (dispatch) => ({
     dispatch(resetVendorCreditTableState()),
 });
 
-export default connect(null, mapDispatchToProps);
+export const withVendorsCreditNotesActions = connect(null, mapDispatchToProps);

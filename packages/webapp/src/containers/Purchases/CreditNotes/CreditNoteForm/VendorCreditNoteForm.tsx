@@ -32,8 +32,8 @@ import {
   transformFormValuesToRequest,
 } from './utils';
 
-import withSettings from '@/containers/Settings/withSettings';
-import withCurrentOrganization from '@/containers/Organization/withCurrentOrganization';
+import { withSettings } from '@/containers/Settings/withSettings';
+import { withCurrentOrganization } from '@/containers/Organization/withCurrentOrganization';
 
 /**
  * Vendor Credit note form.
@@ -70,16 +70,16 @@ function VendorCreditNoteForm({
     () => ({
       ...(!isEmpty(vendorCredit)
         ? {
-            ...transformToEditForm(vendorCredit),
-          }
+          ...transformToEditForm(vendorCredit),
+        }
         : {
-            ...defaultVendorsCreditNote,
-            ...(vendorcreditAutoIncrement && {
-              vendor_credit_number: vendorCreditNumber,
-            }),
-            currency_code: base_currency,
-            ...newVendorCredit,
+          ...defaultVendorsCreditNote,
+          ...(vendorcreditAutoIncrement && {
+            vendor_credit_number: vendorCreditNumber,
           }),
+          currency_code: base_currency,
+          ...newVendorCredit,
+        }),
     }),
     [vendorCredit, base_currency],
   );

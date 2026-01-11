@@ -5,7 +5,7 @@ import {
   isVendorCreditTableStateChangedFactory,
 } from '@/store/VendorCredit/vendorCredit.selector';
 
-export default (mapState) => {
+export const withVendorsCreditNotes = (mapState) => {
   const getVendorsCreditNoteTableState = getVendorCreditTableStateFactory();
   const isVendorsCreditNoteTableChanged =
     isVendorCreditTableStateChangedFactory();

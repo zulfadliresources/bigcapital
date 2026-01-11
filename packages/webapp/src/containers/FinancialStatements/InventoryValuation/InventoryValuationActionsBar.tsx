@@ -14,9 +14,9 @@ import { DashboardActionsBar, Icon, FormattedMessage as T } from '@/components';
 
 import NumberFormatDropdown from '@/components/NumberFormatDropdown';
 
-import withInventoryValuation from './withInventoryValuation';
-import withInventoryValuationActions from './withInventoryValuationActions';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
+import { withInventoryValuation } from './withInventoryValuation';
+import { withInventoryValuationActions } from './withInventoryValuationActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
 import { useInventoryValuationContext } from './InventoryValuationProvider';
 
 import { compose, saveInvoke } from '@/utils';
@@ -100,18 +100,6 @@ function InventoryValuationActionsBar({
             className={classNames(Classes.MINIMAL, 'button--filter')}
             text={<T id={'format'} />}
             icon={<Icon icon="numbers" width={23} height={16} />}
-          />
-        </Popover>
-
-        <Popover
-          // content={}
-          interactionKind={PopoverInteractionKind.CLICK}
-          position={Position.BOTTOM_LEFT}
-        >
-          <Button
-            className={classNames(Classes.MINIMAL, 'button--filter')}
-            text={<T id={'filter'} />}
-            icon={<Icon icon="filter-16" iconSize={16} />}
           />
         </Popover>
 

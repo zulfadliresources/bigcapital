@@ -16,12 +16,12 @@ import NumberFormatDropdown from '@/components/NumberFormatDropdown';
 import { InventoryItemDetailsExportMenu } from './components';
 
 import { useInventoryItemDetailsContext } from './InventoryItemDetailsProvider';
-import withInventoryItemDetails from './withInventoryItemDetails';
-import withInventoryItemDetailsActions from './withInventoryItemDetailsActions';
+import { withInventoryItemDetails } from './withInventoryItemDetails';
+import { withInventoryItemDetailsActions } from './withInventoryItemDetailsActions';
 
 import { compose, saveInvoke } from '@/utils';
 import { DialogsName } from '@/constants/dialogs';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
 
 /**
  * Inventory item details actions bar.
@@ -99,18 +99,6 @@ function InventoryItemDetailsActionsBar({
             className={classNames(Classes.MINIMAL, 'button--filter')}
             text={<T id={'format'} />}
             icon={<Icon icon="numbers" width={23} height={16} />}
-          />
-        </Popover>
-
-        <Popover
-          // content={}
-          interactionKind={PopoverInteractionKind.CLICK}
-          position={Position.BOTTOM_LEFT}
-        >
-          <Button
-            className={classNames(Classes.MINIMAL, 'button--filter')}
-            text={<T id={'filter'} />}
-            icon={<Icon icon="filter-16" iconSize={16} />}
           />
         </Popover>
 

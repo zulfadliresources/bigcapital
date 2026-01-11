@@ -10,4 +10,4 @@ const mapDispatchToProps = (dispatch) => ({
   resetBillsTableState: () => dispatch(resetBillsTableState()),
 });
 
-export default connect(null, mapDispatchToProps);
+export const withBillsActions = connect(null, mapDispatchToProps);

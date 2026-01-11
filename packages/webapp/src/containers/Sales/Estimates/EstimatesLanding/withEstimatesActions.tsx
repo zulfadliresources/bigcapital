@@ -10,4 +10,4 @@ const mapDispatchToProps = (dispatch) => ({
   resetEstimatesTableState: () => dispatch(resetEstimatesTableState()),
 });
 
-export default connect(null, mapDispatchToProps);
+export const withEstimatesActions = connect(null, mapDispatchToProps);

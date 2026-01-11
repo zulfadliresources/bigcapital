@@ -24,11 +24,11 @@ import {
 } from '@/components';
 import { BillAction, AbilitySubject } from '@/constants/abilityOption';
 
-import withBills from './withBills';
-import withBillsActions from './withBillsActions';
-import withSettings from '@/containers/Settings/withSettings';
-import withSettingsActions from '@/containers/Settings/withSettingsActions';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
+import { withBills } from './withBills';
+import { withBillsActions } from './withBillsActions';
+import { withSettings } from '@/containers/Settings/withSettings';
+import { withSettingsActions } from '@/containers/Settings/withSettingsActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
 
 import { useBillsListContext } from './BillsListProvider';
 import { useRefreshBills } from '@/hooks/query/bills';
@@ -41,7 +41,7 @@ import { DialogsName } from '@/constants/dialogs';
  * Bills actions bar.
  */
 function BillActionsBar({
-  // #withBillActions
+  // #withBillsActions
   setBillsTableState,
 
   // #withBills

@@ -28,11 +28,11 @@ import {
   FSelect,
 } from '@/components';
 
-import withEstimates from './withEstimates';
-import withEstimatesActions from './withEstimatesActions';
-import withSettings from '@/containers/Settings/withSettings';
-import withSettingsActions from '@/containers/Settings/withSettingsActions';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
+import { withEstimates } from './withEstimates';
+import { withEstimatesActions } from './withEstimatesActions';
+import { withSettings } from '@/containers/Settings/withSettings';
+import { withSettingsActions } from '@/containers/Settings/withSettingsActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
 
 import { useEstimatesListContext } from './EstimatesListProvider';
 import { useRefreshEstimates } from '@/hooks/query/estimates';
@@ -41,7 +41,7 @@ import { useDownloadExportPdf } from '@/hooks/query/FinancialReports/use-export-
 import { SaleEstimateAction, AbilitySubject } from '@/constants/abilityOption';
 import { compose } from '@/utils';
 import { DialogsName } from '@/constants/dialogs';
-import withDrawerActions from '@/containers/Drawer/withDrawerActions';
+import { withDrawerActions } from '@/containers/Drawer/withDrawerActions';
 import { DRAWERS } from '@/constants/drawers';
 import {
   BrandingThemeFormGroup,

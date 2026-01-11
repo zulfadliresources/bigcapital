@@ -13,13 +13,13 @@ import classNames from 'classnames';
 
 import { DashboardActionsBar, FormattedMessage as T, Icon } from '@/components';
 
-import withJournalActions from './withJournalActions';
-import withJournal from './withJournal';
+import { withJournalActions } from './withJournalActions';
+import { withJournal } from './withJournal';
 
 import { compose } from '@/utils';
 import { useJournalSheetContext } from './JournalProvider';
 import { JournalSheetExportMenu } from './components';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
 import { DialogsName } from '@/constants/dialogs';
 
 /**
@@ -76,19 +76,6 @@ function JournalActionsBar({
           active={isFilterDrawerOpen}
           onClick={handleFilterToggleClick}
         />
-        <NavbarDivider />
-
-        <Popover
-          interactionKind={PopoverInteractionKind.CLICK}
-          position={Position.BOTTOM_LEFT}
-        >
-          <Button
-            className={classNames(Classes.MINIMAL, 'button--filter')}
-            text={<T id={'filter'} />}
-            icon={<Icon icon="filter-16" iconSize={16} />}
-          />
-        </Popover>
-
         <NavbarDivider />
 
         <Button

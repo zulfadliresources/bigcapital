@@ -14,13 +14,13 @@ import classNames from 'classnames';
 
 import NumberFormatDropdown from '@/components/NumberFormatDropdown';
 
-import withVendorsBalanceSummary from './withVendorsBalanceSummary';
-import withVendorsBalanceSummaryActions from './withVendorsBalanceSummaryActions';
+import { withVendorsBalanceSummary } from './withVendorsBalanceSummary';
+import { withVendorsBalanceSummaryActions } from './withVendorsBalanceSummaryActions';
 import { useVendorsBalanceSummaryContext } from './VendorsBalanceSummaryProvider';
 
 import { saveInvoke, compose } from '@/utils';
 import { VendorSummarySheetExportMenu } from './components';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
 import { DialogsName } from '@/constants/dialogs';
 
 /**
@@ -105,11 +105,6 @@ function VendorsBalanceSummaryActionsBar({
           />
         </Popover>
 
-        <Button
-          className={Classes.MINIMAL}
-          text={<T id={'filter'} />}
-          icon={<Icon icon="filter-16" iconSize={16} />}
-        />
         <NavbarDivider />
 
         <Button

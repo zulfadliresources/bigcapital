@@ -17,12 +17,12 @@ import { useAPAgingSummaryContext } from './APAgingSummaryProvider';
 import NumberFormatDropdown from '@/components/NumberFormatDropdown';
 import { APAgingSummaryExportMenu } from './components';
 
-import withAPAgingSummary from './withAPAgingSummary';
-import withAPAgingSummaryActions from './withAPAgingSummaryActions';
+import { withAPAgingSummary } from './withAPAgingSummary';
+import { withAPAgingSummaryActions } from './withAPAgingSummaryActions';
 
 import { saveInvoke, compose } from '@/utils';
 import { DialogsName } from '@/constants/dialogs';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
 
 /**
  * AP Aging summary sheet - Actions bar.
@@ -105,11 +105,6 @@ function APAgingSummaryActionsBar({
           />
         </Popover>
 
-        <Button
-          className={Classes.MINIMAL}
-          text={<T id={'filter'} />}
-          icon={<Icon icon="filter-16" iconSize={16} />}
-        />
         <NavbarDivider />
 
         <Button

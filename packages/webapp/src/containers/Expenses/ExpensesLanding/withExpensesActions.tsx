@@ -10,4 +10,4 @@ const mapDispatchToProps = (dispatch) => ({
   resetExpensesTableState: (state) => dispatch(resetExpensesTableState(state)),
 });
 
-export default connect(null, mapDispatchToProps);
+export const withExpensesActions = connect(null, mapDispatchToProps);

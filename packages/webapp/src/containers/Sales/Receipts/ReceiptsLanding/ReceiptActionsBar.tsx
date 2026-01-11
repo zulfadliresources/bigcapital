@@ -30,11 +30,11 @@ import {
   DashboardActionViewsList,
 } from '@/components';
 
-import withReceipts from './withReceipts';
-import withReceiptsActions from './withReceiptsActions';
-import withSettings from '@/containers/Settings/withSettings';
-import withSettingsActions from '@/containers/Settings/withSettingsActions';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
+import { withReceipts } from './withReceipts';
+import { withReceiptsActions } from './withReceiptsActions';
+import { withSettings } from '@/containers/Settings/withSettings';
+import { withSettingsActions } from '@/containers/Settings/withSettingsActions';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
 
 import { useReceiptsListContext } from './ReceiptsListProvider';
 import { useRefreshReceipts } from '@/hooks/query/receipts';
@@ -43,7 +43,7 @@ import { SaleReceiptAction, AbilitySubject } from '@/constants/abilityOption';
 
 import { DialogsName } from '@/constants/dialogs';
 import { compose } from '@/utils';
-import withDrawerActions from '@/containers/Drawer/withDrawerActions';
+import { withDrawerActions } from '@/containers/Drawer/withDrawerActions';
 import { DRAWERS } from '@/constants/drawers';
 
 /**

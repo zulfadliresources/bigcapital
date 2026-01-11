@@ -22,6 +22,7 @@ import withSettings from '@/containers/Settings/withSettings';
 import withAlertsActions from '@/containers/Alert/withAlertActions';
 import withDialogActions from '@/containers/Dialog/withDialogActions';
 import withDrawerActions from '@/containers/Drawer/withDrawerActions';
+import withAccountsTableActions from './withAccountsTableActions';
 import { compose } from '@/utils';
 import { DRAWERS } from '@/constants/drawers';
 
@@ -134,7 +135,7 @@ function AccountsDataTable({
 }
 
 export default compose(
-  withAlertsActions,
+  withAlertActions,
   withDrawerActions,
   withDialogActions,
   withSettings(({ accountsSettings }) => ({
