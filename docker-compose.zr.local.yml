@@ -1,0 +1,74 @@
+services:
+  server:
+    container_name: bigcapital-server-local
+    # build: ./packages/server
+    image: bigcapitalhq/server:latest
+    # image: ghcr.io/bigcapitalhq/server:latest
+    env_file:
+      - .env.zr.local
+    ports:
+      - '3001:3000'
+    expose:
+      - '3000'
+    depends_on:
+      - mongo
+      - gotenberg
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - bigcapital_network
+
+  webapp:
+    container_name: bigcapital-webapp-local
+    # build: ./packages/webapp
+    image: bigcapitalhq/webapp:latest
+    # image: ghcr.io/bigcapitalhq/webapp:latest
+    ports:
+      - '8080:80'
+    depends_on:
+      - server
+    volumes:
+      - ./packages/webapp/nginx/sites/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - bigcapital_network
+
+  database_migration:
+    container_name: bigcapital-database-migration-local
+    build:
+      context: ./docker/migration
+      dockerfile: Dockerfile
+    env_file:
+      - .env.zr.local
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - bigcapital_network
+
+  mongo:
+    container_name: bigcapital-mongo-local
+    build: ./docker/mongo
+    expose:
+      - '27017'
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-local:/var/lib/mongodb
+    networks:
+      - bigcapital_network
+
+  gotenberg:
+    image: gotenberg/gotenberg:7
+    expose:
+      - '3000'
+    ports:
+      - '9003:3000'
+    networks:
+      - bigcapital_network
+
+volumes:
+  mongo-local:
+    driver: local
+
+networks:
+  bigcapital_network:
+    driver: bridge
