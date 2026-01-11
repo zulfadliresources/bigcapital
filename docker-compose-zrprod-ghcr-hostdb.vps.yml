@@ -1,5 +1,3 @@
-version: '3.8'
-
 # VPS Production Override for HostDB Setup
 # Usage: docker-compose -f docker-compose-zrprod-ghcr-hostdb.yml -f docker-compose-zrprod-ghcr-hostdb.vps.yml up -d
 
@@ -42,7 +40,30 @@ services:
         
         log() { echo "[$$(date +'%Y-%m-%d %H:%M:%S')] $$1" | tee -a "$$LOG_FILE"; }
         
-        # MongoDB Backup
+        # MySQL Backup (Host databases - separate system and tenant backups)
+        log "MySQL backup note: Host databases backed up individually"
+        
+        # System database backup
+        log "Backing up system database..."
+        mysqldump -u${DB_USER} -p${DB_PASSWORD} --single-transaction --routines --triggers --events bigcapital_system 2>/dev/null | gzip > "/home/zulfadli.com/backups/bigcapital/mariadb_bigcapital_system_$$TIMESTAMP.sql.gz"
+        log "System database backup completed: mariadb_bigcapital_system_$$TIMESTAMP.sql.gz"
+        
+        # Tenant databases backup (individual files)
+        log "Finding tenant databases..."
+        TENANT_DBS=$$(mysql -u${DB_USER} -p${DB_PASSWORD} -e "SHOW DATABASES LIKE 'bigcapital_%';" 2>/dev/null | grep -v "bigcapital_system" | grep -v "Database")
+        
+        if [ ! -z "$$TENANT_DBS" ]; then
+            log "Found tenant databases: $$TENANT_DBS"
+            for DB in $$TENANT_DBS; do
+                log "Backing up tenant database: $$DB"
+                mysqldump -u${DB_USER} -p${DB_PASSWORD} --single-transaction --routines --triggers --events "$$DB" 2>/dev/null | gzip > "/home/zulfadli.com/backups/bigcapital/mariadb_$${DB}_$$TIMESTAMP.sql.gz"
+                log "Tenant database $$DB backup completed: mariadb_$${DB}_$$TIMESTAMP.sql.gz"
+            done
+        else
+            log "No tenant databases found"
+        fi
+        
+        # MongoDB Backup (System data: attachments, sessions, etc.)
         log "Starting MongoDB backup..."
         docker exec bigcapital-mongo mongodump --db=bigcapital --archive --gzip 2>/dev/null > "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz"
         cp "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz" /host-backups/ 2>/dev/null || true
@@ -52,6 +73,7 @@ services:
         log "Cleaning up backups older than $$BACKUP_RETENTION_DAYS days..."
         find $$BACKUP_DIR -name "mongo_*.archive.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete
         find /host-backups -name "mongo_*.archive.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete 2>/dev/null || true
+        find /host-backups -name "mariadb_*.sql.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete 2>/dev/null || true
         log "Backup completed. Total files: $$(ls -1 $$BACKUP_DIR/*.gz 2>/dev/null | wc -l)"
         BACKUP_SCRIPT
         
@@ -67,6 +89,16 @@ services:
         echo "Backups stored: /backups (volume) and /home/zulfadli.com/backups/bigcapital (host)"
         echo "Owner: zulfa5798"
         echo "Permissions: 755 (owner full access, others read/execute)"
+        echo ""
+        echo "📋 Backup Coverage:"
+        echo "  ✅ MongoDB: bigcapital (system data - attachments, sessions, etc.)"
+        echo "  ✅ MySQL: bigcapital_system (system database)"
+        echo "  ✅ MySQL: Individual tenant databases (bigcapital_{id})"
+        echo ""
+        echo "📁 Backup File Structure:"
+        echo "  mongo_TIMESTAMP.archive.gz"
+        echo "  mariadb_bigcapital_system_TIMESTAMP.sql.gz"
+        echo "  mariadb_bigcapital_{tenant_id}_TIMESTAMP.sql.gz"
         echo ""
         echo "Run manual backup: docker exec bigcapital-backup /usr/local/bin/backup.sh"
         echo "View backups: ls -lh /home/zulfadli.com/backups/bigcapital/"
