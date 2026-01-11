@@ -3,7 +3,7 @@
 
 services:
   backup:
-    # user: "zulfa5798:zulfa5798"  # Commented out - will create user in script
+    user: "zulfa5798:zulfa5798"  # Commented out - will create user in script
     volumes:
       # Use VPS backup directory with proper permissions
       - backup_data:/backups
