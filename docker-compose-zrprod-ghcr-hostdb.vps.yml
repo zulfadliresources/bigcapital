@@ -3,7 +3,7 @@
 
 services:
   backup:
-    user: "zulfa5798:zulfa5798"  # Run as zulfa5798 user
+    # user: "zulfa5798:zulfa5798"  # Commented out - will create user in script
     volumes:
       # Use VPS backup directory with proper permissions
       - backup_data:/backups
@@ -17,9 +17,32 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
+        # Create zulfa5798 user with matching host UID/GID
+        if ! id -u zulfa5798 > /dev/null 2>&1; then
+            # Get UID/GID from the host backup directory
+            HOST_UID=$(stat -c '%u' /host-backups 2>/dev/null || echo "1000")
+            HOST_GID=$(stat -c '%g' /host-backups 2>/dev/null || echo "1000")
+            
+            # Create group if it doesn't exist
+            if ! getent group $HOST_GID > /dev/null 2>&1; then
+                groupadd -g $HOST_GID zulfa5798 2>/dev/null || true
+            fi
+            
+            # Create user with matching UID/GID
+            useradd -u $HOST_UID -g $HOST_GID -M -s /bin/bash zulfa5798 2>/dev/null || \
+            echo "Warning: Could not create user zulfa5798 with UID $HOST_UID, proceeding with root permissions"
+        fi
+        
         # Ensure backup directory exists and has correct permissions
         mkdir -p /host-backups
-        chown -R zulfa5798:zulfa5798 /host-backups 2>/dev/null || true
+        if id -u zulfa5798 > /dev/null 2>&1; then
+            chown -R zulfa5798:zulfa5798 /host-backups 2>/dev/null || true
+        else
+            # Fallback to numeric IDs if user creation failed
+            HOST_UID=$(stat -c '%u' /host-backups 2>/dev/null || echo "1000")
+            HOST_GID=$(stat -c '%g' /host-backups 2>/dev/null || echo "1000")
+            chown -R $HOST_UID:$HOST_GID /host-backups 2>/dev/null || true
+        fi
         chmod -R 755 /host-backups
         
         # Install required packages
