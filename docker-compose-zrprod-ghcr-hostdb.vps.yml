@@ -1,0 +1,76 @@
+version: '3.8'
+
+# VPS Production Override for HostDB Setup
+# Usage: docker-compose -f docker-compose-zrprod-ghcr-hostdb.yml -f docker-compose-zrprod-ghcr-hostdb.vps.yml up -d
+
+services:
+  backup:
+    user: "zulfa5798:zulfa5798"  # Run as zulfa5798 user
+    volumes:
+      # Use VPS backup directory with proper permissions
+      - backup_data:/backups
+      - /home/zulfadli.com/backups/bigcapital:/host-backups
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./backups:/repo-backups:ro
+    environment:
+      # Ensure backup script runs with correct permissions
+      - BACKUP_RETENTION_DAYS=7
+      - BACKUP_SCHEDULE=17 * * * *
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # Ensure backup directory exists and has correct permissions
+        mkdir -p /host-backups
+        chown -R zulfa5798:zulfa5798 /host-backups 2>/dev/null || true
+        chmod -R 755 /host-backups
+        
+        # Install required packages
+        apt-get update && apt-get install -y cron mysql-client docker.io && rm -rf /var/lib/apt/lists/*
+        
+        # Copy manual backup scripts from repo if they exist
+        if [ -d "/repo-backups" ]; then
+          cp /repo-backups/*.sh /host-backups/ 2>/dev/null || true
+          chmod +x /host-backups/*.sh 2>/dev/null || true
+        fi
+        
+        # Create backup script
+        cat > /usr/local/bin/backup.sh << 'BACKUP_SCRIPT'
+        #!/bin/bash
+        BACKUP_DIR="/backups"
+        TIMESTAMP=$$(date +"%Y%m%d_%H%M%S")
+        LOG_FILE="$$BACKUP_DIR/backup_$$(date +%Y%m%d).log"
+        
+        log() { echo "[$$(date +'%Y-%m-%d %H:%M:%S')] $$1" | tee -a "$$LOG_FILE"; }
+        
+        # MongoDB Backup
+        log "Starting MongoDB backup..."
+        docker exec bigcapital-mongo mongodump --db=bigcapital --archive --gzip 2>/dev/null > "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz"
+        cp "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz" /host-backups/ 2>/dev/null || true
+        log "MongoDB backup completed: mongo_$$TIMESTAMP.archive.gz ($$(du -h $$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz | cut -f1))"
+        
+        # Cleanup old backups
+        log "Cleaning up backups older than $$BACKUP_RETENTION_DAYS days..."
+        find $$BACKUP_DIR -name "mongo_*.archive.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete
+        find /host-backups -name "mongo_*.archive.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete 2>/dev/null || true
+        log "Backup completed. Total files: $$(ls -1 $$BACKUP_DIR/*.gz 2>/dev/null | wc -l)"
+        BACKUP_SCRIPT
+        
+        chmod +x /usr/local/bin/backup.sh
+        
+        # Setup cron job
+        echo "$$BACKUP_SCHEDULE /usr/local/bin/backup.sh >> /backups/cron.log 2>&1" > /etc/cron.d/backup-cron
+        chmod 0644 /etc/cron.d/backup-cron
+        crontab /etc/cron.d/backup-cron
+        
+        echo "✅ Backup service started!"
+        echo "Schedule: $$BACKUP_SCHEDULE (hourly at :17)"
+        echo "Backups stored: /backups (volume) and /home/zulfadli.com/backups/bigcapital (host)"
+        echo "Owner: zulfa5798"
+        echo "Permissions: 755 (owner full access, others read/execute)"
+        echo ""
+        echo "Run manual backup: docker exec bigcapital-backup /usr/local/bin/backup.sh"
+        echo "View backups: ls -lh /home/zulfadli.com/backups/bigcapital/"
+        
+        # Keep container running and show cron logs
+        touch /backups/cron.log
+        cron && tail -f /backups/cron.log

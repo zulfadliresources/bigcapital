@@ -9,8 +9,21 @@
 docker-compose -f docker-compose-zrprod-ghcr.yml up -d
 # 
 docker-compose -f docker-compose.zr.local.yml down
+docker-compose -f docker-compose.zr.local.yml down && docker volume rm bigcapital_mariadb-local && docker volume rm bigcapital_redis-local 
+
 docker-compose -f docker-compose.zr.local.yml up -d --pull always
+
 docker-compose -f docker-compose.zr.local.yml up -d
+
+
+docker-compose -f docker-compose.zr.local.yml logs server --tail 20
+
+docker-compose -f docker-compose.zr.local.yml restart server
+
+# ghcr-hostdbredis
+docker-compose -f docker-compose-zrprod-ghcr-hostdb.yml --env-file .env up -d --pull always
+docker-compose -f docker-compose-zrprod-ghcr-hostdb.yml --env-file .env up -d
+docker-compose -f docker-compose-zrprod-ghcr-hostdb.yml down
 
 # Access BigCapital
 http://localhost:8080

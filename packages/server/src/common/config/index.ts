@@ -1,3 +1,4 @@
+import app from './app';
 import systemDatabase from './system-database';
 import tenantDatabase from './tenant-database';
 import signup from './signup';
@@ -15,9 +16,12 @@ import mail from './mail';
 import loops from './loops';
 import bankfeed from './bankfeed';
 import throttle from './throttle';
+import cloud from './cloud';
 
 export const config = [
+  app,
   systemDatabase,
+  cloud,
   tenantDatabase,
   signup,
   gotenberg,
