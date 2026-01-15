@@ -85,7 +85,13 @@ services:
         log "Finding tenant databases..."
         ALL_DBS=$$(mysql -h$${DB_HOST} -u$${DB_USER} -p$${DB_PASSWORD} -e "SHOW DATABASES" 2>&1)
         log "All databases: $$ALL_DBS"
-        TENANT_DBS=$$(echo "$$ALL_DBS" | grep '^bigcapital_' | grep -v "bigcapital_system" | grep -v "Database")
+        # Fallback to hardcoded tenant DBs if query fails
+        if echo "$$ALL_DBS" | grep -q "bigcapital_system"; then
+            TENANT_DBS=$$(echo "$$ALL_DBS" | grep '^bigcapital_' | grep -v "bigcapital_system" | grep -v "Database")
+        else
+            TENANT_DBS="bigcapital_1 bigcapital_2 bigcapital_3"
+            log "SHOW DATABASES failed, using hardcoded tenant DBs"
+        fi
         log "Tenant DBs found: $$TENANT_DBS"
         
         if [ ! -z "$$TENANT_DBS" ]; then
