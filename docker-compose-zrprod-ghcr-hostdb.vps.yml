@@ -82,7 +82,9 @@ services:
         
         # Tenant databases backup (individual files)
         log "Finding tenant databases..."
-        TENANT_DBS=$$(mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASSWORD} -e "SHOW DATABASES LIKE 'bigcapital_%';" 2>/dev/null | grep -v "bigcapital_system" | grep -v "Database")
+        ALL_DBS=$$(mysql -h$${DB_HOST} -u$${DB_USER} -p$${DB_PASSWORD} -e "SHOW DATABASES" 2>/dev/null)
+        log "All databases: $$ALL_DBS"
+        TENANT_DBS=$$(echo "$$ALL_DBS" | grep '^bigcapital_' | grep -v "bigcapital_system" | grep -v "Database")
         log "Tenant DBs found: $$TENANT_DBS"
         
         if [ ! -z "$$TENANT_DBS" ]; then
