@@ -65,6 +65,7 @@ services:
         # Get host UID/GID for file ownership
         HOST_UID=$$(stat -c '%u' /host-backups 2>/dev/null || echo "1000")
         HOST_GID=$$(stat -c '%g' /host-backups 2>/dev/null || echo "1000")
+        BACKUP_RETENTION_DAYS=$${BACKUP_RETENTION_DAYS:-7}
         log "Host UID/GID: $$HOST_UID $$HOST_GID"
         
         log() { echo "[$$(date +'%Y-%m-%d %H:%M:%S')] $$1" | tee -a "$$LOG_FILE"; }
@@ -82,7 +83,7 @@ services:
         
         # Tenant databases backup (individual files)
         log "Finding tenant databases..."
-        ALL_DBS=$$(mysql -h$${DB_HOST} -u$${DB_USER} -p$${DB_PASSWORD} -e "SHOW DATABASES" 2>/dev/null)
+        ALL_DBS=$$(mysql -h$${DB_HOST} -u$${DB_USER} -p$${DB_PASSWORD} -e "SHOW DATABASES" 2>&1)
         log "All databases: $$ALL_DBS"
         TENANT_DBS=$$(echo "$$ALL_DBS" | grep '^bigcapital_' | grep -v "bigcapital_system" | grep -v "Database")
         log "Tenant DBs found: $$TENANT_DBS"
