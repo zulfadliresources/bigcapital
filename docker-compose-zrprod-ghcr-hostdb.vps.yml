@@ -46,10 +46,6 @@ services:
         fi
         chmod -R 755 /host-backups
         
-        # Ensure HOST_UID and HOST_GID are set for the backup script
-        HOST_UID=$(stat -c '%u' /host-backups 2>/dev/null || echo "1000")
-        HOST_GID=$(stat -c '%g' /host-backups 2>/dev/null || echo "1000")
-        
         # Install required packages
         apt-get update && apt-get install -y cron mysql-client docker.io && rm -rf /var/lib/apt/lists/*
         
@@ -60,11 +56,15 @@ services:
         fi
         
         # Create backup script
-        cat > /usr/local/bin/backup.sh << BACKUP_SCRIPT
+        cat > /usr/local/bin/backup.sh << 'BACKUP_SCRIPT'
         #!/bin/bash
         BACKUP_DIR="/backups"
         TIMESTAMP=$$(date +"%Y%m%d_%H%M%S")
         LOG_FILE="$$BACKUP_DIR/backup_$$(date +%Y%m%d).log"
+        
+        # Get host UID/GID for file ownership
+        HOST_UID=$$(stat -c '%u' /host-backups 2>/dev/null || echo "1000")
+        HOST_GID=$$(stat -c '%g' /host-backups 2>/dev/null || echo "1000")
         
         log() { echo "[$$(date +'%Y-%m-%d %H:%M:%S')] $$1" | tee -a "$$LOG_FILE"; }
         
