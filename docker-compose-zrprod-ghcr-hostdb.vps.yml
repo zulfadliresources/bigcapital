@@ -76,7 +76,7 @@ services:
         # System database backup
         log "Backing up system database..."
         if mysqldump -h${DB_HOST} -u${DB_USER} -p${DB_PASSWORD} --single-transaction --routines --triggers --events bigcapital_system 2>/dev/null | gzip > "/host-backups/mariadb_bigcapital_system_$$TIMESTAMP.sql.gz"; then
-            chown $HOST_UID:$HOST_GID "/host-backups/mariadb_bigcapital_system_$$TIMESTAMP.sql.gz" 2>/dev/null || true            log "Ownership after chown: $$(ls -l /host-backups/mariadb_bigcapital_system_$$TIMESTAMP.sql.gz | awk '{print $$3,$$4}')"            log "System database backup completed: mariadb_bigcapital_system_$$TIMESTAMP.sql.gz"
+            chown $HOST_UID:$HOST_GID "/host-backups/mariadb_bigcapital_system_$$TIMESTAMP.sql.gz" 2>&1 || log "chown failed for system DB"            log "Ownership after chown: $$(ls -l /host-backups/mariadb_bigcapital_system_$$TIMESTAMP.sql.gz | awk '{print $$3,$$4}')"            log "System database backup completed: mariadb_bigcapital_system_$$TIMESTAMP.sql.gz"
         else
             log "System database backup failed"
         fi
@@ -99,7 +99,7 @@ services:
             for DB in $$TENANT_DBS; do
                 log "Backing up tenant database: $$DB"
                 if mysqldump -h${DB_HOST} -u${DB_USER} -p${DB_PASSWORD} --single-transaction --routines --triggers --events "$$DB" 2>/dev/null | gzip > "/host-backups/mariadb_$${DB}_$$TIMESTAMP.sql.gz"; then
-                    chown $HOST_UID:$HOST_GID "/host-backups/mariadb_$${DB}_$$TIMESTAMP.sql.gz" 2>/dev/null || true
+                    chown $HOST_UID:$HOST_GID "/host-backups/mariadb_$${DB}_$$TIMESTAMP.sql.gz" 2>&1 || log "chown failed for tenant $$DB"
                     log "Tenant database $$DB backup completed: mariadb_$${DB}_$$TIMESTAMP.sql.gz"
                 else
                     log "Tenant database $$DB backup failed"
@@ -112,7 +112,7 @@ services:
 
         if docker exec bigcapital-mongo mongodump --db=bigcapital --archive --gzip 2>/dev/null > "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz"; then
             cp "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz" /host-backups/ 2>/dev/null || true
-            chown $HOST_UID:$HOST_GID "/host-backups/mongo_$$TIMESTAMP.archive.gz" 2>/dev/null || true            log "Ownership after chown: $$(ls -l /host-backups/mongo_$$TIMESTAMP.archive.gz | awk '{print $$3,$$4}')"            log "MongoDB backup completed: mongo_$$TIMESTAMP.archive.gz ($$(du -h $$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz | cut -f1))"
+            chown $HOST_UID:$HOST_GID "/host-backups/mongo_$$TIMESTAMP.archive.gz" 2>&1 || log "chown failed for mongo"            log "Ownership after chown: $$(ls -l /host-backups/mongo_$$TIMESTAMP.archive.gz | awk '{print $$3,$$4}')"            log "MongoDB backup completed: mongo_$$TIMESTAMP.archive.gz ($$(du -h $$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz | cut -f1))"
         else
             log "MongoDB backup failed"
         fi
