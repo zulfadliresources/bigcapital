@@ -14,6 +14,7 @@ services:
       # Ensure backup script runs with correct permissions
       - BACKUP_RETENTION_DAYS=7
       - BACKUP_SCHEDULE=17 * * * *
+      - DB_HOST=host.docker.internal
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -45,6 +46,10 @@ services:
         fi
         chmod -R 755 /host-backups
         
+        # Ensure HOST_UID and HOST_GID are set for the backup script
+        HOST_UID=$(stat -c '%u' /host-backups 2>/dev/null || echo "1000")
+        HOST_GID=$(stat -c '%g' /host-backups 2>/dev/null || echo "1000")
+        
         # Install required packages
         apt-get update && apt-get install -y cron mysql-client docker.io && rm -rf /var/lib/apt/lists/*
         
@@ -55,7 +60,7 @@ services:
         fi
         
         # Create backup script
-        cat > /usr/local/bin/backup.sh << 'BACKUP_SCRIPT'
+        cat > /usr/local/bin/backup.sh << BACKUP_SCRIPT
         #!/bin/bash
         BACKUP_DIR="/backups"
         TIMESTAMP=$$(date +"%Y%m%d_%H%M%S")
@@ -68,19 +73,28 @@ services:
         
         # System database backup
         log "Backing up system database..."
-        mysqldump -u${DB_USER} -p${DB_PASSWORD} --single-transaction --routines --triggers --events bigcapital_system 2>/dev/null | gzip > "/home/zulfadli.com/backups/bigcapital/mariadb_bigcapital_system_$$TIMESTAMP.sql.gz"
-        log "System database backup completed: mariadb_bigcapital_system_$$TIMESTAMP.sql.gz"
+        if mysqldump -h${DB_HOST} -u${DB_USER} -p${DB_PASSWORD} --single-transaction --routines --triggers --events bigcapital_system 2>/dev/null | gzip > "/host-backups/mariadb_bigcapital_system_$$TIMESTAMP.sql.gz"; then
+            chown $HOST_UID:$HOST_GID "/host-backups/mariadb_bigcapital_system_$$TIMESTAMP.sql.gz" 2>/dev/null || true
+            log "System database backup completed: mariadb_bigcapital_system_$$TIMESTAMP.sql.gz"
+        else
+            log "System database backup failed"
+        fi
         
         # Tenant databases backup (individual files)
         log "Finding tenant databases..."
-        TENANT_DBS=$$(mysql -u${DB_USER} -p${DB_PASSWORD} -e "SHOW DATABASES LIKE 'bigcapital_%';" 2>/dev/null | grep -v "bigcapital_system" | grep -v "Database")
+        TENANT_DBS=$$(mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASSWORD} -e "SHOW DATABASES LIKE 'bigcapital_%';" 2>/dev/null | grep -v "bigcapital_system" | grep -v "Database")
+        log "Tenant DBs found: $$TENANT_DBS"
         
         if [ ! -z "$$TENANT_DBS" ]; then
             log "Found tenant databases: $$TENANT_DBS"
             for DB in $$TENANT_DBS; do
                 log "Backing up tenant database: $$DB"
-                mysqldump -u${DB_USER} -p${DB_PASSWORD} --single-transaction --routines --triggers --events "$$DB" 2>/dev/null | gzip > "/home/zulfadli.com/backups/bigcapital/mariadb_$${DB}_$$TIMESTAMP.sql.gz"
-                log "Tenant database $$DB backup completed: mariadb_$${DB}_$$TIMESTAMP.sql.gz"
+                if mysqldump -h${DB_HOST} -u${DB_USER} -p${DB_PASSWORD} --single-transaction --routines --triggers --events "$$DB" 2>/dev/null | gzip > "/host-backups/mariadb_$${DB}_$$TIMESTAMP.sql.gz"; then
+                    chown $HOST_UID:$HOST_GID "/host-backups/mariadb_$${DB}_$$TIMESTAMP.sql.gz" 2>/dev/null || true
+                    log "Tenant database $$DB backup completed: mariadb_$${DB}_$$TIMESTAMP.sql.gz"
+                else
+                    log "Tenant database $$DB backup failed"
+                fi
             done
         else
             log "No tenant databases found"
@@ -88,9 +102,13 @@ services:
         
         # MongoDB Backup (System data: attachments, sessions, etc.)
         log "Starting MongoDB backup..."
-        docker exec bigcapital-mongo mongodump --db=bigcapital --archive --gzip 2>/dev/null > "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz"
-        cp "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz" /host-backups/ 2>/dev/null || true
-        log "MongoDB backup completed: mongo_$$TIMESTAMP.archive.gz ($$(du -h $$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz | cut -f1))"
+        if docker exec bigcapital-mongo mongodump --db=bigcapital --archive --gzip 2>/dev/null > "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz"; then
+            cp "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz" /host-backups/ 2>/dev/null || true
+            chown $HOST_UID:$HOST_GID "/host-backups/mongo_$$TIMESTAMP.archive.gz" 2>/dev/null || true
+            log "MongoDB backup completed: mongo_$$TIMESTAMP.archive.gz ($$(du -h $$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz | cut -f1))"
+        else
+            log "MongoDB backup failed"
+        fi
         
         # Cleanup old backups
         log "Cleaning up backups older than $$BACKUP_RETENTION_DAYS days..."
