@@ -8,7 +8,7 @@ services:
       # Use VPS backup directory with proper permissions
       - backup_data:/backups
       - /home/zulfadli.com/backups/bigcapital:/host-backups
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # - /var/run/docker.sock:/var/run/docker.sock:ro  # Not needed while MongoDB backup is disabled
       - ./backups:/repo-backups:ro
     environment:
       # Ensure backup script runs with correct permissions
@@ -18,36 +18,36 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        # Create zulfa5798 user with matching host UID/GID
-        if ! id -u zulfa5798 > /dev/null 2>&1; then
-            # Get UID/GID from the host backup directory
-            HOST_UID=$(stat -c '%u' /host-backups 2>/dev/null || echo "1000")
-            HOST_GID=$(stat -c '%g' /host-backups 2>/dev/null || echo "1000")
-            
-            # Create group if it doesn't exist
-            if ! getent group $HOST_GID > /dev/null 2>&1; then
-                groupadd -g $HOST_GID zulfa5798 2>/dev/null || true
-            fi
-            
-            # Create user with matching UID/GID
-            useradd -u $HOST_UID -g $HOST_GID -M -s /bin/bash zulfa5798 2>/dev/null || \
-            echo "Warning: Could not create user zulfa5798 with UID $HOST_UID, proceeding with root permissions"
+        # Ensure backup directory exists first
+        mkdir -p /host-backups
+        
+        # Get actual UID/GID from the host backup directory
+        HOST_UID=$(stat -c '%u' /host-backups)
+        HOST_GID=$(stat -c '%g' /host-backups)
+        
+        echo "Detected host backup directory ownership: UID=$HOST_UID GID=$HOST_GID"
+        
+        # Create group with matching GID (almalinux)
+        if ! getent group $HOST_GID > /dev/null 2>&1; then
+            groupadd -g $HOST_GID almalinux 2>/dev/null || echo "Using existing group with GID $HOST_GID"
         fi
         
-        # Ensure backup directory exists and has correct permissions
-        mkdir -p /host-backups
-        if id -u zulfa5798 > /dev/null 2>&1; then
-            chown -R zulfa5798:zulfa5798 /host-backups 2>/dev/null || true
-        else
-            # Fallback to numeric IDs if user creation failed
-            HOST_UID=$(stat -c '%u' /host-backups 2>/dev/null || echo "1000")
-            HOST_GID=$(stat -c '%g' /host-backups 2>/dev/null || echo "1000")
-            chown -R $HOST_UID:$HOST_GID /host-backups 2>/dev/null || true
+        # Create user with matching UID and add to the correct group
+        if ! id -u zulfa5798 > /dev/null 2>&1; then
+            useradd -u $HOST_UID -g $HOST_GID -M -s /bin/bash zulfa5798 2>/dev/null || echo "Using existing user with UID $HOST_UID"
         fi
+        
+        # Verify the user was created correctly
+        id zulfa5798
+        
+        # Fix permissions on backup directory
+        chown -R $HOST_UID:$HOST_GID /host-backups
         chmod -R 755 /host-backups
         
-        # Install required packages
-        apt-get update && apt-get install -y cron mysql-client docker.io && rm -rf /var/lib/apt/lists/*
+        echo "Backup directory permissions set to $HOST_UID:$HOST_GID"
+        
+        # Install required packages (docker.io removed - not needed since MongoDB backup is disabled)
+        apt-get update && apt-get install -y cron default-mysql-client && rm -rf /var/lib/apt/lists/*
         
         # Copy manual backup scripts from repo if they exist
         if [ -d "/repo-backups" ]; then
@@ -55,102 +55,181 @@ services:
           chmod +x /host-backups/*.sh 2>/dev/null || true
         fi
         
+        # Write out env vars so cron jobs can source them
+        HOST_UID=$(stat -c '%u' /host-backups)
+        HOST_GID=$(stat -c '%g' /host-backups)
+        cat > /etc/backup-env << ENVEOF
+        export HOST_UID=$HOST_UID
+        export HOST_GID=$HOST_GID
+        export DB_HOST=$DB_HOST
+        export DB_USER=$DB_USER
+        export DB_PASSWORD=$DB_PASSWORD
+        export BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+        ENVEOF
+        
+        chmod 600 /etc/backup-env
+        echo "Environment file created with UID=$HOST_UID GID=$HOST_GID RETENTION=${BACKUP_RETENTION_DAYS:-7} days"
+        
         # Create backup script
         cat > /usr/local/bin/backup.sh << 'BACKUP_SCRIPT'
         #!/bin/bash
+        set -e
+        
+        # Source environment variables (needed when run from cron)
+        if [ -f /etc/backup-env ]; then
+            . /etc/backup-env
+        else
+            echo "ERROR: /etc/backup-env not found!"
+            exit 1
+        fi
+
         BACKUP_DIR="/backups"
-        TIMESTAMP=$$(date +"%Y%m%d_%H%M%S")
-        LOG_FILE="$$BACKUP_DIR/backup_$$(date +%Y%m%d).log"
-        
-        # Get host UID/GID for file ownership
-        HOST_UID=$$(stat -c '%u' /host-backups 2>/dev/null || echo "1000")
-        HOST_GID=$$(stat -c '%g' /host-backups 2>/dev/null || echo "1000")
-        BACKUP_RETENTION_DAYS=$${BACKUP_RETENTION_DAYS:-7}
-        log "Host UID/GID: $$HOST_UID $$HOST_GID"
-        
-        log() { echo "[$$(date +'%Y-%m-%d %H:%M:%S')] $$1" | tee -a "$$LOG_FILE"; }
-        
-        # MySQL Backup (Host databases - separate system and tenant backups)
-        log "MySQL backup note: Host databases backed up individually"
-        
+        TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+        LOG_FILE="$BACKUP_DIR/backup_$(date +%Y%m%d).log"
+
+        log() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"; }
+
+        log "=== Backup started ==="
+        log "Host UID/GID: $HOST_UID:$HOST_GID"
+        log "Retention days: ${BACKUP_RETENTION_DAYS}"
+
         # System database backup
         log "Backing up system database..."
-        if mysqldump -h${DB_HOST} -u${DB_USER} -p${DB_PASSWORD} --single-transaction --routines --triggers --events bigcapital_system 2>/dev/null | gzip > "/host-backups/mariadb_bigcapital_system_$$TIMESTAMP.sql.gz"; then
-            chown $HOST_UID:$HOST_GID "/host-backups/mariadb_bigcapital_system_$$TIMESTAMP.sql.gz" 2>&1 || log "chown failed for system DB"            log "Ownership after chown: $$(ls -l /host-backups/mariadb_bigcapital_system_$$TIMESTAMP.sql.gz | awk '{print $$3,$$4}')"            log "System database backup completed: mariadb_bigcapital_system_$$TIMESTAMP.sql.gz"
+        if mysqldump -h${DB_HOST} -u${DB_USER} -p${DB_PASSWORD} --single-transaction --routines --triggers --events bigcapital_system 2>/dev/null | gzip > "/host-backups/mariadb_bigcapital_system_${TIMESTAMP}.sql.gz"; then
+            chown ${HOST_UID}:${HOST_GID} "/host-backups/mariadb_bigcapital_system_${TIMESTAMP}.sql.gz"
+            chmod 644 "/host-backups/mariadb_bigcapital_system_${TIMESTAMP}.sql.gz"
+            PERMS=$(ls -l "/host-backups/mariadb_bigcapital_system_${TIMESTAMP}.sql.gz" | awk '{print $1,$3":"$4}')
+            SIZE=$(du -h "/host-backups/mariadb_bigcapital_system_${TIMESTAMP}.sql.gz" | cut -f1)
+            log "✓ System DB: mariadb_bigcapital_system_${TIMESTAMP}.sql.gz ($SIZE) [$PERMS]"
         else
-            log "System database backup failed"
+            log "✗ System database backup failed"
         fi
-        
-        # Tenant databases backup (individual files)
+
+        # Tenant databases backup
         log "Finding tenant databases..."
-        ALL_DBS=$$(mysql -h$${DB_HOST} -u$${DB_USER} -p$${DB_PASSWORD} -e "SHOW DATABASES" 2>&1)
-        log "All databases: $$ALL_DBS"
-        # Fallback to hardcoded tenant DBs if query fails
-        if echo "$$ALL_DBS" | grep -q "bigcapital_system"; then
-            TENANT_DBS=$$(echo "$$ALL_DBS" | grep '^bigcapital_' | grep -v "bigcapital_system" | grep -v "Database")
+        ALL_DBS=$(mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASSWORD} -e "SHOW DATABASES" 2>&1)
+        if echo "$ALL_DBS" | grep -q "bigcapital_system"; then
+            TENANT_DBS=$(echo "$ALL_DBS" | grep '^bigcapital_' | grep -v "bigcapital_system" | grep -v "Database")
         else
-            TENANT_DBS="bigcapital_1 bigcapital_2 bigcapital_3"
-            log "SHOW DATABASES failed, using hardcoded tenant DBs"
+            TENANT_DBS=""
+            log "No tenant databases found or SHOW DATABASES failed"
         fi
-        log "Tenant DBs found: $$TENANT_DBS"
-        
-        if [ ! -z "$$TENANT_DBS" ]; then
-            log "Found tenant databases: $$TENANT_DBS"
-            for DB in $$TENANT_DBS; do
-                log "Backing up tenant database: $$DB"
-                if mysqldump -h${DB_HOST} -u${DB_USER} -p${DB_PASSWORD} --single-transaction --routines --triggers --events "$$DB" 2>/dev/null | gzip > "/host-backups/mariadb_$${DB}_$$TIMESTAMP.sql.gz"; then
-                    chown $HOST_UID:$HOST_GID "/host-backups/mariadb_$${DB}_$$TIMESTAMP.sql.gz" 2>&1 || log "chown failed for tenant $$DB"
-                    log "Tenant database $$DB backup completed: mariadb_$${DB}_$$TIMESTAMP.sql.gz"
+
+        if [ ! -z "$TENANT_DBS" ]; then
+            log "Found tenant databases: $(echo $TENANT_DBS | wc -w) total"
+            for DB in $TENANT_DBS; do
+                log "Backing up: $DB"
+                if mysqldump -h${DB_HOST} -u${DB_USER} -p${DB_PASSWORD} --single-transaction --routines --triggers --events "$DB" 2>/dev/null | gzip > "/host-backups/mariadb_${DB}_${TIMESTAMP}.sql.gz"; then
+                    chown ${HOST_UID}:${HOST_GID} "/host-backups/mariadb_${DB}_${TIMESTAMP}.sql.gz"
+                    chmod 644 "/host-backups/mariadb_${DB}_${TIMESTAMP}.sql.gz"
+                    SIZE=$(du -h "/host-backups/mariadb_${DB}_${TIMESTAMP}.sql.gz" | cut -f1)
+                    log "✓ Tenant: mariadb_${DB}_${TIMESTAMP}.sql.gz ($SIZE)"
                 else
-                    log "Tenant database $$DB backup failed"
+                    log "✗ Failed: $DB"
                 fi
             done
-        else
-            log "No tenant databases found"
         fi
-        
 
-        if docker exec bigcapital-mongo mongodump --db=bigcapital --archive --gzip 2>/dev/null > "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz"; then
-            cp "$$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz" /host-backups/ 2>/dev/null || true
-            chown $HOST_UID:$HOST_GID "/host-backups/mongo_$$TIMESTAMP.archive.gz" 2>&1 || log "chown failed for mongo"            log "Ownership after chown: $$(ls -l /host-backups/mongo_$$TIMESTAMP.archive.gz | awk '{print $$3,$$4}')"            log "MongoDB backup completed: mongo_$$TIMESTAMP.archive.gz ($$(du -h $$BACKUP_DIR/mongo_$$TIMESTAMP.archive.gz | cut -f1))"
-        else
-            log "MongoDB backup failed"
-        fi
-        
-        # Cleanup old backups
-        log "Cleaning up backups older than $$BACKUP_RETENTION_DAYS days..."
-        find $$BACKUP_DIR -name "mongo_*.archive.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete
-        find /host-backups -name "mongo_*.archive.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete 2>/dev/null || true
-        find /host-backups -name "mariadb_*.sql.gz" -type f -mtime +$$BACKUP_RETENTION_DAYS -delete 2>/dev/null || true
-        log "Backup completed. Total files: $$(ls -1 $$BACKUP_DIR/*.gz 2>/dev/null | wc -l)"
+        # MongoDB backup (disabled - not in use yet)
+        # Uncomment below when MongoDB is in use:
+        # log "Backing up MongoDB..."
+        # if docker exec bigcapital-mongo mongodump --db=bigcapital --archive --gzip 2>/dev/null > "$BACKUP_DIR/mongo_${TIMESTAMP}.archive.gz"; then
+        #     cp "$BACKUP_DIR/mongo_${TIMESTAMP}.archive.gz" /host-backups/
+        #     chown ${HOST_UID}:${HOST_GID} "/host-backups/mongo_${TIMESTAMP}.archive.gz"
+        #     chmod 644 "/host-backups/mongo_${TIMESTAMP}.archive.gz"
+        #     SIZE=$(du -h "/host-backups/mongo_${TIMESTAMP}.archive.gz" | cut -f1)
+        #     log "✓ MongoDB: mongo_${TIMESTAMP}.archive.gz ($SIZE)"
+        # else
+        #     log "✗ MongoDB backup failed"
+        # fi
+        log "MongoDB backup: skipped (disabled)"
+
+        # Cleanup strategy:
+        #   - Today:                     keep all files (all hourly runs)
+        #   - Previous days (≤ 7 days):  keep only the LATEST backup run per day, delete earlier runs
+        #   - Older than retention:      delete all
+        TODAY=$(date +%Y%m%d)
+        CUTOFF_DATE=$(date -d "${BACKUP_RETENTION_DAYS} days ago" +%Y%m%d 2>/dev/null || date -v-${BACKUP_RETENTION_DAYS}d +%Y%m%d)
+        log "Cleanup | Today: $TODAY | Cutoff: $CUTOFF_DATE | Strategy: all files today, latest run only for previous days"
+
+        BEFORE_COUNT=$(find /host-backups -type f -name "*.gz" 2>/dev/null | wc -l)
+        log "Files before cleanup: $BEFORE_COUNT"
+
+        DELETED=0
+
+        # Collect all unique dates present in backup filenames, excluding today
+        ALL_DATES=$(for FILE in /host-backups/*.gz; do
+            [ -f "$FILE" ] || continue
+            echo "$(basename $FILE)" | grep -oE '[0-9]{8}_[0-9]{6}' | cut -d'_' -f1
+        done | sort -u | grep -v "^$TODAY$")
+
+        for DATE in $ALL_DATES; do
+            if [ "$DATE" -lt "$CUTOFF_DATE" ]; then
+                # Delete all files from dates beyond retention window
+                for FILE in /host-backups/*.gz; do
+                    [ -f "$FILE" ] || continue
+                    FILE_DATE=$(basename "$FILE" | grep -oE '[0-9]{8}_[0-9]{6}' | cut -d'_' -f1)
+                    if [ "$FILE_DATE" = "$DATE" ]; then
+                        log "Deleting expired: $(basename $FILE)"
+                        rm -f "$FILE" && DELETED=$((DELETED+1))
+                    fi
+                done
+            else
+                # For previous days within retention: find latest timestamp, delete all earlier ones
+                LATEST_TS=$(for FILE in /host-backups/*.gz; do
+                    [ -f "$FILE" ] || continue
+                    basename "$FILE" | grep -oE "${DATE}_[0-9]{6}"
+                done | sort -u | tail -1)
+
+                if [ ! -z "$LATEST_TS" ]; then
+                    for FILE in /host-backups/*.gz; do
+                        [ -f "$FILE" ] || continue
+                        FILENAME=$(basename "$FILE")
+                        FILE_TS=$(echo "$FILENAME" | grep -oE '[0-9]{8}_[0-9]{6}')
+                        FILE_DATE=$(echo "$FILE_TS" | cut -d'_' -f1)
+                        if [ "$FILE_DATE" = "$DATE" ] && [ "$FILE_TS" != "$LATEST_TS" ]; then
+                            log "Deduplicating: $FILENAME (keeping $LATEST_TS for $DATE)"
+                            rm -f "$FILE" && DELETED=$((DELETED+1))
+                        fi
+                    done
+                fi
+            fi
+        done
+
+        AFTER_COUNT=$(find /host-backups -type f -name "*.gz" 2>/dev/null | wc -l)
+        log "Files deleted: $DELETED"
+        log "Files after cleanup: $AFTER_COUNT"
+        TOTAL_SIZE=$(du -sh /host-backups 2>/dev/null | cut -f1)
+        log "Total backup size: $TOTAL_SIZE"
+        log "=== Backup completed ==="
         BACKUP_SCRIPT
         
         chmod +x /usr/local/bin/backup.sh
         
         # Setup cron job
-        echo "$$BACKUP_SCHEDULE /usr/local/bin/backup.sh >> /backups/cron.log 2>&1" > /etc/cron.d/backup-cron
+        echo "$BACKUP_SCHEDULE /usr/local/bin/backup.sh >> /backups/cron.log 2>&1" > /etc/cron.d/backup-cron
         chmod 0644 /etc/cron.d/backup-cron
         crontab /etc/cron.d/backup-cron
         
+        echo ""
         echo "✅ Backup service started!"
-        echo "Schedule: $$BACKUP_SCHEDULE (hourly at :17)"
-        echo "Backups stored: /backups (volume) and /home/zulfadli.com/backups/bigcapital (host)"
-        echo "Owner: zulfa5798"
-        echo "Permissions: 755 (owner full access, others read/execute)"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Schedule:     $BACKUP_SCHEDULE"
+        echo "Backups:      /home/zulfadli.com/backups/bigcapital"
+        echo "Owner:        $(id zulfa5798 | cut -d' ' -f1-2)"
+        echo "Retention:    ${BACKUP_RETENTION_DAYS:-7} days"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo ""
-        echo "📋 Backup Coverage:"
-        echo "  ✅ MongoDB: bigcapital (system data - attachments, sessions, etc.)"
-        echo "  ✅ MySQL: bigcapital_system (system database)"
-        echo "  ✅ MySQL: Individual tenant databases (bigcapital_{id})"
+        echo "Commands:"
+        echo "  Manual backup:  docker exec bigcapital-backup /usr/local/bin/backup.sh"
+        echo "  View backups:   ls -lh /home/zulfadli.com/backups/bigcapital/"
+        echo "  View logs:      docker exec bigcapital-backup cat /backups/cron.log"
+        echo "  Check size:     du -sh /home/zulfadli.com/backups/bigcapital/"
         echo ""
-        echo "📁 Backup File Structure:"
-        echo "  mongo_TIMESTAMP.archive.gz"
-        echo "  mariadb_bigcapital_system_TIMESTAMP.sql.gz"
-        echo "  mariadb_bigcapital_{tenant_id}_TIMESTAMP.sql.gz"
-        echo ""
-        echo "Run manual backup: docker exec bigcapital-backup /usr/local/bin/backup.sh"
-        echo "View backups: ls -lh /home/zulfadli.com/backups/bigcapital/"
         
-        # Keep container running and show cron logs
+        # Run initial backup to test
+        echo "Running initial test backup..."
+        /usr/local/bin/backup.sh
+        
         touch /backups/cron.log
         cron && tail -f /backups/cron.log
