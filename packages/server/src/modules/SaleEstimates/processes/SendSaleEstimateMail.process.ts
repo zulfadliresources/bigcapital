@@ -1,11 +1,7 @@
-import { Process, Processor } from '@nestjs/bull';
-import { Job } from 'bull';
-import { Inject, Scope } from '@nestjs/common';
-import { JOB_REF } from '@nestjs/bull';
-import {
-  SendSaleEstimateMailJob,
-  SendSaleEstimateMailQueue,
-} from '../types/SaleEstimates.types';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Job } from 'bullmq';
+import { Scope } from '@nestjs/common';
+import { SendSaleEstimateMailQueue } from '../types/SaleEstimates.types';
 import { SendSaleEstimateMail } from '../commands/SendSaleEstimateMail';
 import { ClsService, UseCls } from 'nestjs-cls';
 
@@ -13,24 +9,26 @@ import { ClsService, UseCls } from 'nestjs-cls';
   name: SendSaleEstimateMailQueue,
   scope: Scope.REQUEST,
 })
-export class SendSaleEstimateMailProcess {
+export class SendSaleEstimateMailProcess extends WorkerHost {
   constructor(
     private readonly sendEstimateMailService: SendSaleEstimateMail,
     private readonly clsService: ClsService,
-    @Inject(JOB_REF)
-    private readonly jobRef: Job,
-  ) { }
+  ) {
+    super();
+  }
 
-  @Process(SendSaleEstimateMailJob)
   @UseCls()
-  async handleSendMail() {
-    const { saleEstimateId, messageOptions, organizationId, userId } = this.jobRef.data;
+  async process(job: Job) {
+    const { saleEstimateId, messageOptions, organizationId, userId } = job.data;
 
     this.clsService.set('organizationId', organizationId);
     this.clsService.set('userId', userId);
 
     try {
-      await this.sendEstimateMailService.sendMail(saleEstimateId, messageOptions);
+      await this.sendEstimateMailService.sendMail(
+        saleEstimateId,
+        messageOptions,
+      );
     } catch (error) {
       console.error('Failed to process estimate mail job:', error);
       throw error;

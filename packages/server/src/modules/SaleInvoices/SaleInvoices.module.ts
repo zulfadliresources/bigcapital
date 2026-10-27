@@ -1,7 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
-import { TenancyContext } from '../Tenancy/TenancyContext.service';
+import { TenancyModule } from '../Tenancy/Tenancy.module';
 import { TenancyDatabaseModule } from '../Tenancy/TenancyDB/TenancyDB.module';
-import { TransformerInjectable } from '../Transformer/TransformerInjectable.service';
 import { CreateSaleInvoice } from './commands/CreateSaleInvoice.service';
 import { DeleteSaleInvoice } from './commands/DeleteSaleInvoice.service';
 import { DeliverSaleInvoice } from './commands/DeliverSaleInvoice.service';
@@ -37,22 +36,29 @@ import { SaleInvoiceWriteoffSubscriber } from './subscribers/SaleInvoiceWriteoff
 import { SaleInvoiceWriteoffGLStorage } from './commands/writeoff/SaleInvoiceWriteoffGLStorage';
 import { InvoiceInventoryTransactions } from './commands/inventory/InvoiceInventoryTransactions';
 import { MailModule } from '../Mail/Mail.module';
+import { SMSModule } from '../SMS/SMS.module';
+import { FeaturesModule } from '../Features/Features.module';
 import { GetSaleInvoicesService } from './queries/GetSaleInvoices';
 import { SendSaleInvoiceMail } from './commands/SendSaleInvoiceMail';
+import { SaleInvoiceSmsNotification } from './SaleInvoiceSmsNotification';
 import { GetSaleInvoiceMailState } from './queries/GetSaleInvoiceMailState.service';
 import { InventoryCostModule } from '../InventoryCost/InventoryCost.module';
 import { SendSaleInvoiceMailCommon } from './commands/SendInvoiceInvoiceMailCommon.service';
 import { DynamicListModule } from '../DynamicListing/DynamicList.module';
 import { MailNotificationModule } from '../MailNotification/MailNotification.module';
 import { SendSaleInvoiceMailProcessor } from './processors/SendSaleInvoiceMail.processor';
-import { BullModule } from '@nestjs/bull';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { BullModule } from '@nestjs/bullmq';
 import { SendSaleInvoiceQueue } from './constants';
+import { SMS_QUEUE } from '../SMS/SMS.constants';
 import { InvoicePaymentIntegrationSubscriber } from './subscribers/InvoicePaymentIntegrationSubscriber';
 import { InvoiceChangeStatusOnMailSentSubscriber } from './subscribers/InvoiceChangeStatusOnMailSentSubscriber';
 import { InvoiceCostGLEntriesSubscriber } from './subscribers/InvoiceCostGLEntriesSubscriber';
 import { InvoicePaymentGLRewriteSubscriber } from './subscribers/InvoicePaymentGLRewriteSubscriber';
 import { SaleInvoiceWriteInventoryTransactionsSubscriber } from './subscribers/InvoiceWriteInventoryTransactions';
 import { SaleInvoiceAutoIncrementSubscriber } from './subscribers/SaleInvoiceAutoIncrementSubscriber';
+import { SaleInvoiceSmsNotificationSubscriber } from './subscribers/SaleInvoiceSmsNotificationSubscriber';
 import { SaleInvoiceCostGLEntries } from './SaleInvoiceCostGLEntries';
 import { InvoicePaymentsGLEntriesRewrite } from './InvoicePaymentsGLRewrite';
 import { PaymentsReceivedModule } from '../PaymentReceived/PaymentsReceived.module';
@@ -60,9 +66,12 @@ import { SaleInvoicesCost } from './SalesInvoicesCost';
 import { SaleInvoicesExportable } from './commands/SaleInvoicesExportable';
 import { SaleInvoicesImportable } from './commands/SaleInvoicesImportable';
 import { PaymentLinksModule } from '../PaymentLinks/PaymentLinks.module';
+import { BulkDeleteSaleInvoicesService } from './BulkDeleteSaleInvoices.service';
+import { ValidateBulkDeleteSaleInvoicesService } from './ValidateBulkDeleteSaleInvoices.service';
 
 @Module({
   imports: [
+    TenancyModule,
     TenancyDatabaseModule,
     PdfTemplatesModule,
     AutoIncrementOrdersModule,
@@ -74,11 +83,18 @@ import { PaymentLinksModule } from '../PaymentLinks/PaymentLinks.module';
     LedgerModule,
     AccountsModule,
     MailModule,
+    SMSModule,
+    FeaturesModule,
     MailNotificationModule,
+    BullModule.registerQueue({ name: SMS_QUEUE }),
     forwardRef(() => InventoryCostModule),
     forwardRef(() => PaymentLinksModule),
     DynamicListModule,
     BullModule.registerQueue({ name: SendSaleInvoiceQueue }),
+    BullBoardModule.forFeature({
+      name: SendSaleInvoiceQueue,
+      adapter: BullMQAdapter,
+    }),
   ],
   controllers: [SaleInvoicesController],
   providers: [
@@ -95,8 +111,6 @@ import { PaymentLinksModule } from '../PaymentLinks/PaymentLinks.module';
     GetInvoicePaymentMail,
     SaleInvoicePdf,
     SaleInvoiceApplication,
-    TenancyContext,
-    TransformerInjectable,
     ItemsEntriesService,
     CommandSaleInvoiceValidators,
     CommandSaleInvoiceDTOTransformer,
@@ -113,6 +127,7 @@ import { PaymentLinksModule } from '../PaymentLinks/PaymentLinks.module';
     SendSaleInvoiceMail,
     GetSaleInvoicesService,
     GetSaleInvoiceMailState,
+    SaleInvoiceSmsNotification,
     SendSaleInvoiceMailCommon,
     SendSaleInvoiceMailProcessor,
     SaleInvoiceCostGLEntries,
@@ -122,10 +137,13 @@ import { PaymentLinksModule } from '../PaymentLinks/PaymentLinks.module';
     InvoicePaymentGLRewriteSubscriber,
     SaleInvoiceWriteInventoryTransactionsSubscriber,
     SaleInvoiceAutoIncrementSubscriber,
+    SaleInvoiceSmsNotificationSubscriber,
     InvoicePaymentsGLEntriesRewrite,
     SaleInvoicesCost,
     SaleInvoicesExportable,
     SaleInvoicesImportable,
+    BulkDeleteSaleInvoicesService,
+    ValidateBulkDeleteSaleInvoicesService,
   ],
   exports: [
     GetSaleInvoice,
@@ -135,4 +153,4 @@ import { PaymentLinksModule } from '../PaymentLinks/PaymentLinks.module';
     SaleInvoicesImportable,
   ],
 })
-export class SaleInvoicesModule { }
+export class SaleInvoicesModule {}

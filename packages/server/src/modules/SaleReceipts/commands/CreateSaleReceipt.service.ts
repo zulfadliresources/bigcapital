@@ -89,7 +89,7 @@ export class CreateSaleReceipt {
 
       // Inserts the sale receipt graph to the storage.
       const saleReceipt = await this.saleReceiptModel()
-        .query()
+        .query(trx)
         .upsertGraph({
           ...saleReceiptObj,
         });

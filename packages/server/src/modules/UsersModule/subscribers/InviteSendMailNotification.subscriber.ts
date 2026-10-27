@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { events } from '@/common/events/events';
 import { OnEvent } from '@nestjs/event-emitter';
 import {
@@ -28,7 +28,8 @@ export default class InviteSendMainNotificationSubscribe {
   @OnEvent(events.inviteUser.sendInviteTenantSynced)
   async sendMailNotification({
     invite,
-    user,
+    user: _user,
+    invitingUser,
   }: IUserInviteTenantSyncedEventPayload) {
     const tenant = await this.tenancyContext.getTenant();
     const authedUser = await this.tenancyContext.getSystemUser();
@@ -36,8 +37,8 @@ export default class InviteSendMainNotificationSubscribe {
     const organizationId = tenant.organizationId;
     const userId = authedUser.id;
 
-    this.sendInviteMailQueue.add(SendInviteUserMailJob, {
-      fromUser: user,
+    await this.sendInviteMailQueue.add(SendInviteUserMailJob, {
+      fromUser: invitingUser,
       invite,
       userId,
       organizationId,

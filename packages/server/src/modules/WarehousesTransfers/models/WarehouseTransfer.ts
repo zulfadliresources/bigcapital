@@ -1,4 +1,4 @@
-import { Model, mixin } from 'objection';
+import { Model } from 'objection';
 import { TenantBaseModel } from '@/modules/System/models/TenantBaseModel';
 import { Warehouse } from '@/modules/Warehouses/models/Warehouse.model';
 import { WarehouseTransferEntry } from './WarehouseTransferEntry';
@@ -28,7 +28,7 @@ export class WarehouseTransfer extends TenantBaseModel {
    * Timestamps columns.
    */
   get timestamps() {
-    return ['created_at', 'updated_at'];
+    return ['createdAt', 'updatedAt'];
   }
 
   /**
@@ -106,7 +106,7 @@ export class WarehouseTransfer extends TenantBaseModel {
       },
 
       /**
-       * 
+       *
        */
       fromWarehouse: {
         relation: Model.BelongsToOneRelation,

@@ -1,17 +1,20 @@
 import { Module } from '@nestjs/common';
 import { FinancialSheetMeta } from './FinancialSheetMeta';
-import { TenancyContext } from '@/modules/Tenancy/TenancyContext.service';
+import { TenancyModule } from '@/modules/Tenancy/Tenancy.module';
 import { TableSheetPdf } from './TableSheetPdf';
 import { TemplateInjectableModule } from '@/modules/TemplateInjectable/TemplateInjectable.module';
 import { ChromiumlyTenancyModule } from '@/modules/ChromiumlyTenancy/ChromiumlyTenancy.module';
+import { InventoryCostModule } from '@/modules/InventoryCost/InventoryCost.module';
+import { AccountingBasisService } from './AccountingBasisService';
 
 @Module({
-  imports: [TemplateInjectableModule, ChromiumlyTenancyModule],
-  providers: [
-    FinancialSheetMeta,
-    TenancyContext,
-    TableSheetPdf,
+  imports: [
+    TenancyModule,
+    TemplateInjectableModule,
+    ChromiumlyTenancyModule,
+    InventoryCostModule,
   ],
-  exports: [FinancialSheetMeta, TableSheetPdf],
+  providers: [FinancialSheetMeta, TableSheetPdf, AccountingBasisService],
+  exports: [FinancialSheetMeta, TableSheetPdf, AccountingBasisService],
 })
 export class FinancialSheetCommonModule {}

@@ -1,4 +1,4 @@
-import { Model, mixin } from 'objection';
+import { Model } from 'objection';
 import { TenantBaseModel } from '@/modules/System/models/TenantBaseModel';
 import { RolePermission } from './RolePermission.model';
 
@@ -14,6 +14,13 @@ export class Role extends TenantBaseModel {
    */
   static get tableName() {
     return 'roles';
+  }
+
+  /**
+   * Timestamps columns.
+   */
+  get timestamps() {
+    return [];
   }
 
   /**

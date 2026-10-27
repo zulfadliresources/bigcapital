@@ -1,10 +1,9 @@
-// @ts-nocheck
-import React from 'react';
-import { Intent, Tag } from '@blueprintjs/core';
+import { Intent, Tag, Classes } from '@blueprintjs/core';
+import clsx from 'classnames';
+import type { TaxRate } from '@bigcapital/sdk-ts';
 import { Align } from '@/constants';
-import styled from 'styled-components';
 
-const codeAccessor = (taxRate) => {
+const codeAccessor = (taxRate: TaxRate) => {
   return (
     <Tag minimal={true} round={false} intent={Intent.NONE} interactive={true}>
       {taxRate.code}
@@ -12,7 +11,7 @@ const codeAccessor = (taxRate) => {
   );
 };
 
-const statusAccessor = (taxRate) => {
+const statusAccessor = (taxRate: TaxRate) => {
   return taxRate.active ? (
     <Tag round={false} intent={Intent.SUCCESS}>
       Active
@@ -24,17 +23,21 @@ const statusAccessor = (taxRate) => {
   );
 };
 
-const nameAccessor = (taxRate) => {
+const nameAccessor = (taxRate: TaxRate) => {
   return (
     <>
       <span>{taxRate.name}</span>
-      {!!taxRate.is_compound && <CompoundText>(Compound tax)</CompoundText>}
+      {!!taxRate.isCompound && (
+        <span className={clsx(Classes.TEXT_MUTED)}>(Compound tax)</span>
+      )}
     </>
   );
 };
 
-const DescriptionAccessor = (taxRate) => {
-  return <DescriptionText>{taxRate.description}</DescriptionText>;
+const DescriptionAccessor = (taxRate: TaxRate) => {
+  return (
+    <span className={clsx(Classes.TEXT_MUTED)}>{taxRate.description}</span>
+  );
 };
 
 /**
@@ -54,7 +57,7 @@ export const useTaxRatesTableColumns = () => {
     },
     {
       Header: 'Rate',
-      accessor: 'rate_formatted',
+      accessor: 'rateFormatted',
       align: Align.Right,
       width: 30,
     },
@@ -71,12 +74,3 @@ export const useTaxRatesTableColumns = () => {
     },
   ];
 };
-
-const CompoundText = styled('span')`
-  color: #738091;
-  margin-left: 5px;
-`;
-
-const DescriptionText = styled('span')`
-  color: #5f6b7c;
-`;

@@ -98,8 +98,8 @@ export class IItemDTO {
   categoryId: number;
 }
 
-export interface IItemCreateDTO extends IItemDTO {}
-export interface IItemEditDTO extends IItemDTO {}
+export type IItemCreateDTO = IItemDTO;
+export type IItemEditDTO = IItemDTO;
 
 // export interface IItemsService {
 //   getItem(tenantId: number, itemId: number): Promise<IItem>;
@@ -152,6 +152,18 @@ export interface IItemEventDeletedPayload {
   // tenantId: number;
   itemId: number;
   oldItem: Item;
+  trx: Knex.Transaction;
+}
+
+export interface IItemEventActivatedPayload {
+  item: Item;
+  itemId: number;
+  trx: Knex.Transaction;
+}
+
+export interface IItemEventInactivatedPayload {
+  item: Item;
+  itemId: number;
   trx: Knex.Transaction;
 }
 

@@ -1,18 +1,17 @@
-import { Item } from './models/Item';
+import { Knex } from 'knex';
 import { CreateItemService } from './CreateItem.service';
 import { DeleteItemService } from './DeleteItem.service';
 import { EditItemService } from './EditItem.service';
-import { IItem, IItemDTO } from '@/interfaces/Item';
-import { Knex } from 'knex';
 import { InactivateItem } from './InactivateItem.service';
 import { ActivateItemService } from './ActivateItem.service';
 import { GetItemService } from './GetItem.service';
 import { ItemTransactionsService } from './ItemTransactions.service';
 import { Injectable } from '@nestjs/common';
 import { GetItemsService } from './GetItems.service';
-import { IItemsFilter } from './types/Items.types';
 import { EditItemDto, CreateItemDto } from './dtos/Item.dto';
 import { GetItemsQueryDto } from './dtos/GetItemsQuery.dto';
+import { BulkDeleteItemsService } from './BulkDeleteItems.service';
+import { ValidateBulkDeleteItemsService } from './ValidateBulkDeleteItems.service';
 
 @Injectable()
 export class ItemsApplicationService {
@@ -25,6 +24,8 @@ export class ItemsApplicationService {
     private readonly getItemService: GetItemService,
     private readonly getItemsService: GetItemsService,
     private readonly itemTransactionsService: ItemTransactionsService,
+    private readonly bulkDeleteItemsService: BulkDeleteItemsService,
+    private readonly validateBulkDeleteItemsService: ValidateBulkDeleteItemsService,
   ) {}
 
   /**
@@ -35,7 +36,7 @@ export class ItemsApplicationService {
    */
   async createItem(
     createItemDto: CreateItemDto,
-    trx?: Knex.Transaction,
+    _trx?: Knex.Transaction,
   ): Promise<number> {
     return this.createItemService.createItem(createItemDto);
   }
@@ -133,5 +134,31 @@ export class ItemsApplicationService {
    */
   async getItemReceiptsTransactions(itemId: number): Promise<any> {
     return this.itemTransactionsService.getItemReceiptTransactions(itemId);
+  }
+
+  /**
+   * Validates which items can be deleted in bulk.
+   * @param {number[]} itemIds - Array of item IDs to validate
+   * @returns {Promise<{deletableCount: number, nonDeletableCount: number, deletableIds: number[], nonDeletableIds: number[]}>}
+   */
+  async validateBulkDeleteItems(itemIds: number[]): Promise<{
+    deletableCount: number;
+    nonDeletableCount: number;
+    deletableIds: number[];
+    nonDeletableIds: number[];
+  }> {
+    return this.validateBulkDeleteItemsService.validateBulkDeleteItems(itemIds);
+  }
+
+  /**
+   * Deletes multiple items in bulk.
+   * @param {number[]} itemIds - Array of item IDs to delete
+   * @returns {Promise<void>}
+   */
+  async bulkDeleteItems(
+    itemIds: number[],
+    options?: { skipUndeletable?: boolean },
+  ): Promise<void> {
+    return this.bulkDeleteItemsService.bulkDeleteItems(itemIds, options);
   }
 }

@@ -1,10 +1,10 @@
 import { css } from '@emotion/css';
 import { ComponentType } from 'react';
+import { EstimateSendMailPreviewHeader } from './EstimateSendMailPreviewHeader';
 import {
   EstimateSendMailReceipt,
   EstimateSendMailReceiptProps,
 } from './EstimateSendMailReceipt';
-import { EstimateSendMailPreviewHeader } from './EstimateSendMailPreviewHeader';
 import { withEstimateMailReceiptPreviewProps } from './withEstimateMailReceiptPreviewProps';
 import { Stack } from '@/components';
 
@@ -18,7 +18,7 @@ const estimatePreviewCss = css`
 
 export const EstimateSendMailReceiptPreview = () => {
   return (
-    <Stack>
+    <Stack spacing={0}>
       <EstimateSendMailPreviewHeader />
 
       <Stack px={4} py={6}>

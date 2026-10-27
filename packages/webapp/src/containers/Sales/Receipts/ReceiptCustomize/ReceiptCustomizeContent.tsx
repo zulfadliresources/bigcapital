@@ -1,21 +1,22 @@
 import { useFormikContext } from 'formik';
-import {
-  ElementCustomize,
-  ElementCustomizeContent,
-} from '@/containers/ElementCustomize/ElementCustomize';
-import { ReceiptCustomizeGeneralField } from './ReceiptCustomizeFieldsGeneral';
+import { initialValues } from './constants';
 import { ReceiptCustomizeFieldsContent } from './ReceiptCustomizeFieldsContent';
+import { ReceiptCustomizeGeneralField } from './ReceiptCustomizeFieldsGeneral';
 import {
   ReceiptPaperTemplate,
   ReceiptPaperTemplateProps,
 } from './ReceiptPaperTemplate';
 import { EstimateBrandingState, ReceiptCustomizeValues } from './types';
-import { initialValues } from './constants';
-import { BrandingTemplateForm } from '@/containers/BrandingTemplates/BrandingTemplateForm';
-import { useDrawerActions } from '@/hooks/state';
+import { Box } from '@/components';
 import { useDrawerContext } from '@/components/Drawer/DrawerProvider';
-import { useElementCustomizeContext } from '@/containers/ElementCustomize/ElementCustomizeProvider';
+import { BrandingTemplateForm } from '@/containers/BrandingTemplates/BrandingTemplateForm';
 import { useIsTemplateNamedFilled } from '@/containers/BrandingTemplates/utils';
+import {
+  ElementCustomize,
+  ElementCustomizeContent,
+} from '@/containers/ElementCustomize/ElementCustomize';
+import { useElementCustomizeContext } from '@/containers/ElementCustomize/ElementCustomizeProvider';
+import { useDrawerActions } from '@/hooks/state';
 
 export function ReceiptCustomizeContent() {
   const { payload, name } = useDrawerContext();
@@ -44,7 +45,9 @@ function ReceiptCustomizeFormContent() {
   return (
     <ElementCustomizeContent>
       <ElementCustomize.PaperTemplate>
-        <ReceiptPaperTemplateFormConnected />
+        <Box overflow="auto" flex="1 1" px={4} py={6}>
+          <ReceiptPaperTemplateFormConnected />
+        </Box>
       </ElementCustomize.PaperTemplate>
 
       <ElementCustomize.FieldsTab id={'general'} label={'General'}>

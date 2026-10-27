@@ -3,6 +3,7 @@ import {
   ElementCustomize,
   ElementCustomizeContent,
 } from '../../../ElementCustomize/ElementCustomize';
+import { initialValues } from './constants';
 import { CreditNoteCustomizeGeneralField } from './CreditNoteCustomizeGeneralFields';
 import { CreditNoteCustomizeContentFields } from './CreditNoteCutomizeContentFields';
 import {
@@ -10,12 +11,12 @@ import {
   CreditNotePaperTemplateProps,
 } from './CreditNotePaperTemplate';
 import { CreditNoteBrandingState, CreditNoteCustomizeValues } from './types';
-import { initialValues } from './constants';
-import { BrandingTemplateForm } from '@/containers/BrandingTemplates/BrandingTemplateForm';
-import { useDrawerActions } from '@/hooks/state';
+import { Box } from '@/components';
 import { useDrawerContext } from '@/components/Drawer/DrawerProvider';
-import { useElementCustomizeContext } from '@/containers/ElementCustomize/ElementCustomizeProvider';
+import { BrandingTemplateForm } from '@/containers/BrandingTemplates/BrandingTemplateForm';
 import { useIsTemplateNamedFilled } from '@/containers/BrandingTemplates/utils';
+import { useElementCustomizeContext } from '@/containers/ElementCustomize/ElementCustomizeProvider';
+import { useDrawerActions } from '@/hooks/state';
 
 export function CreditNoteCustomizeContent() {
   const { payload, name } = useDrawerContext();
@@ -45,7 +46,9 @@ function CreditNoteCustomizeFormContent() {
   return (
     <ElementCustomizeContent>
       <ElementCustomize.PaperTemplate>
-        <CreditNotePaperTemplateFormConnected />
+        <Box overflow="auto" flex="1 1" px={4} py={6}>
+          <CreditNotePaperTemplateFormConnected />
+        </Box>
       </ElementCustomize.PaperTemplate>
 
       <ElementCustomize.FieldsTab id={'general'} label={'General'}>

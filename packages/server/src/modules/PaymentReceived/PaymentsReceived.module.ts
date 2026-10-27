@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bull';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { BullModule } from '@nestjs/bullmq';
+import { RegisterTenancyModel } from '../Tenancy/TenancyModels/Tenancy.module';
+import { InventoryCostLotTracker } from '../InventoryCost/models/InventoryCostLotTracker';
 import { PaymentReceivesController } from './PaymentsReceived.controller';
 import { PaymentReceivesApplication } from './PaymentReceived.application';
 import { CreatePaymentReceivedService } from './commands/CreatePaymentReceived.serivce';
@@ -11,7 +15,7 @@ import { GetPaymentReceivedInvoices } from './queries/GetPaymentReceivedInvoices
 import { GetPaymentReceivedPdfService } from './queries/GetPaymentReceivedPdf.service';
 import { PaymentReceivedValidators } from './commands/PaymentReceivedValidators.service';
 import { PaymentReceiveDTOTransformer } from './commands/PaymentReceivedDTOTransformer';
-import { TenancyContext } from '../Tenancy/TenancyContext.service';
+import { TenancyModule } from '../Tenancy/Tenancy.module';
 import { ChromiumlyTenancyModule } from '../ChromiumlyTenancy/ChromiumlyTenancy.module';
 import { TemplateInjectableModule } from '../TemplateInjectable/TemplateInjectable.module';
 import { PaymentReceivedBrandingTemplate } from './queries/PaymentReceivedBrandingTemplate.service';
@@ -21,8 +25,11 @@ import { WarehousesModule } from '../Warehouses/Warehouses.module';
 import { PdfTemplatesModule } from '../PdfTemplate/PdfTemplates.module';
 import { AutoIncrementOrdersModule } from '../AutoIncrementOrders/AutoIncrementOrders.module';
 import { PaymentReceivedAutoIncrementSubscriber } from './subscribers/PaymentReceivedAutoIncrementSubscriber';
+import { PaymentReceivedSmsNotificationSubscriber } from './subscribers/PaymentReceivedSmsNotificationSubscriber';
 import { PaymentReceivedGLEntriesSubscriber } from './subscribers/PaymentReceivedGLEntriesSubscriber';
 import { PaymentReceivedGLEntries } from './commands/PaymentReceivedGLEntries';
+import { PaymentReceivedCostGLEntries } from './commands/PaymentReceivedCostGLEntries';
+import { PaymentReceivedCostGLEntriesSubscriber } from './subscribers/PaymentReceivedCostGLEntriesSubscriber';
 import { PaymentReceivedSyncInvoicesSubscriber } from './subscribers/PaymentReceivedSyncInvoices';
 import { PaymentReceivedInvoiceSync } from './commands/PaymentReceivedInvoiceSync.service';
 import { LedgerModule } from '../Ledger/Ledger.module';
@@ -32,18 +39,27 @@ import { GetPaymentsReceivedService } from './queries/GetPaymentsReceived.servic
 import { MailNotificationModule } from '../MailNotification/MailNotification.module';
 import { DynamicListModule } from '../DynamicListing/DynamicList.module';
 import { MailModule } from '../Mail/Mail.module';
+import { SMSModule } from '../SMS/SMS.module';
+import { FeaturesModule } from '../Features/Features.module';
 import { SendPaymentReceivedMailProcessor } from './processors/PaymentReceivedMailNotification.processor';
+import { PaymentReceivedSmsNotification } from './PaymentReceivedSmsNotification';
 import { SEND_PAYMENT_RECEIVED_MAIL_QUEUE } from './constants';
+import { SMS_QUEUE } from '../SMS/SMS.constants';
 import { PaymentsReceivedExportable } from './commands/PaymentsReceivedExportable';
 import { PaymentsReceivedImportable } from './commands/PaymentsReceivedImportable';
 import { PaymentsReceivedPagesService } from './queries/PaymentsReceivedPages.service';
 import { GetPaymentReceivedMailTemplate } from './queries/GetPaymentReceivedMailTemplate.service';
 import { GetPaymentReceivedMailState } from './queries/GetPaymentReceivedMailState.service';
+import { BulkDeletePaymentReceivedService } from './BulkDeletePaymentReceived.service';
+import { ValidateBulkDeletePaymentReceivedService } from './ValidateBulkDeletePaymentReceived.service';
+
+const models = [RegisterTenancyModel(InventoryCostLotTracker)];
 
 @Module({
   controllers: [PaymentReceivesController],
   providers: [
     PaymentReceivesApplication,
+    PaymentReceivedSmsNotification,
     CreatePaymentReceivedService,
     DeletePaymentReceivedService,
     EditPaymentReceivedService,
@@ -56,10 +72,12 @@ import { GetPaymentReceivedMailState } from './queries/GetPaymentReceivedMailSta
     PaymentReceivedBrandingTemplate,
     PaymentReceivedIncrement,
     PaymentReceivedGLEntries,
-    TenancyContext,
+    PaymentReceivedCostGLEntries,
     PaymentReceivedInvoiceSync,
     PaymentReceivedAutoIncrementSubscriber,
+    PaymentReceivedSmsNotificationSubscriber,
     PaymentReceivedGLEntriesSubscriber,
+    PaymentReceivedCostGLEntriesSubscriber,
     PaymentReceivedSyncInvoicesSubscriber,
     GetPaymentsReceivedService,
     SendPaymentReceiveMailNotification,
@@ -68,7 +86,9 @@ import { GetPaymentReceivedMailState } from './queries/GetPaymentReceivedMailSta
     PaymentsReceivedImportable,
     PaymentsReceivedPagesService,
     GetPaymentReceivedMailTemplate,
-    GetPaymentReceivedMailState
+    GetPaymentReceivedMailState,
+    BulkDeletePaymentReceivedService,
+    ValidateBulkDeletePaymentReceivedService,
   ],
   exports: [
     PaymentReceivesApplication,
@@ -76,9 +96,11 @@ import { GetPaymentReceivedMailState } from './queries/GetPaymentReceivedMailSta
     PaymentReceivedGLEntries,
     PaymentsReceivedExportable,
     PaymentsReceivedImportable,
-    PaymentReceivedValidators
+    PaymentReceivedValidators,
   ],
   imports: [
+    TenancyModule,
+    ...models,
     ChromiumlyTenancyModule,
     TemplateInjectableModule,
     BranchesModule,
@@ -90,7 +112,14 @@ import { GetPaymentReceivedMailState } from './queries/GetPaymentReceivedMailSta
     MailNotificationModule,
     DynamicListModule,
     MailModule,
+    SMSModule,
+    FeaturesModule,
+    BullModule.registerQueue({ name: SMS_QUEUE }),
     BullModule.registerQueue({ name: SEND_PAYMENT_RECEIVED_MAIL_QUEUE }),
+    BullBoardModule.forFeature({
+      name: SEND_PAYMENT_RECEIVED_MAIL_QUEUE,
+      adapter: BullMQAdapter,
+    }),
   ],
 })
 export class PaymentsReceivedModule {}

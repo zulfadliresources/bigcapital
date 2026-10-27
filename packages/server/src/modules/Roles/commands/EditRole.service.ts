@@ -30,7 +30,13 @@ export class EditRoleService {
 
     // Retrieve the given role or throw not found serice error.
     const oldRole = await this.roleModel().query().findById(roleId);
-    const permissions = editRoleDTO.permissions;
+    // Transform permissions: map permissionId to id for Objection.js upsertGraph
+    const permissions = editRoleDTO.permissions.map((perm) => ({
+      id: perm.permissionId,
+      subject: perm.subject,
+      ability: perm.ability,
+      value: perm.value,
+    }));
 
     // Updates the role on the storage.
     return this.uow.withTransaction(async (trx: Knex.Transaction) => {

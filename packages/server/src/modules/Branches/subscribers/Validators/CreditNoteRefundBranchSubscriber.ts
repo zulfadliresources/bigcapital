@@ -7,19 +7,19 @@ import { IRefundCreditNoteCreatingPayload } from '@/modules/CreditNoteRefunds/ty
 @Injectable()
 export class CreditNoteRefundBranchValidateSubscriber {
   constructor(
-    private readonly validateBranchExistance: ValidateBranchExistance
-  ) { }
+    private readonly validateBranchExistance: ValidateBranchExistance,
+  ) {}
 
   /**
    * Validate branch existance on refund credit note creating.
    * @param {IRefundCreditNoteCreatingPayload} payload
    */
-  @OnEvent(events.creditNote.onRefundCreating)
+  @OnEvent(events.creditNote.onRefundCreating, { suppressErrors: false })
   async validateBranchExistanceOnCreditRefundCreating({
     newCreditNoteDTO,
   }: IRefundCreditNoteCreatingPayload) {
     await this.validateBranchExistance.validateTransactionBranchWhenActive(
-      newCreditNoteDTO.branchId
+      newCreditNoteDTO.branchId,
     );
   }
 }

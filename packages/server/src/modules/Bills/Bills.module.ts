@@ -14,9 +14,10 @@ import { BranchesSettingsService } from '../Branches/BranchesSettings';
 import { WarehouseTransactionDTOTransform } from '../Warehouses/Integrations/WarehouseTransactionDTOTransform';
 import { WarehousesSettings } from '../Warehouses/WarehousesSettings';
 import { ItemEntriesTaxTransactions } from '../TaxRates/ItemEntriesTaxTransactions.service';
-import { TenancyContext } from '../Tenancy/TenancyContext.service';
+import { FeaturesModule } from '../Features/Features.module';
+import { TenancyModule } from '../Tenancy/Tenancy.module';
 import { BillsController } from './Bills.controller';
-import { BillLandedCostsModule } from '../BillLandedCosts/BillLandedCosts.module';
+import { BillLandedCostsIntegrationModule } from './integrations/BillLandedCostsIntegration.module';
 import { BillGLEntriesSubscriber } from './subscribers/BillGLEntriesSubscriber';
 import { BillGLEntries } from './commands/BillsGLEntries';
 import { LedgerModule } from '../Ledger/Ledger.module';
@@ -29,17 +30,20 @@ import { InventoryCostModule } from '../InventoryCost/InventoryCost.module';
 import { BillsExportable } from './commands/BillsExportable';
 import { BillsImportable } from './commands/BillsImportable';
 import { GetBillPaymentTransactionsService } from './queries/GetBillPayments';
+import { BulkDeleteBillsService } from './BulkDeleteBills.service';
+import { ValidateBulkDeleteBillsService } from './ValidateBulkDeleteBills.service';
 
 @Module({
   imports: [
-    BillLandedCostsModule,
+    TenancyModule,
+    FeaturesModule,
+    BillLandedCostsIntegrationModule,
     LedgerModule,
     AccountsModule,
     DynamicListModule,
     InventoryCostModule,
   ],
   providers: [
-    TenancyContext,
     BillsApplication,
     BranchTransactionDTOTransformer,
     WarehouseTransactionDTOTransform,
@@ -63,6 +67,8 @@ import { GetBillPaymentTransactionsService } from './queries/GetBillPayments';
     BillsExportable,
     BillsImportable,
     GetBillPaymentTransactionsService,
+    BulkDeleteBillsService,
+    ValidateBulkDeleteBillsService,
   ],
   controllers: [BillsController],
   exports: [BillsExportable, BillsImportable],

@@ -1,39 +1,34 @@
-// @ts-nocheck
-import React from 'react';
-import intl from 'react-intl-universal';
 import { ControlGroup } from '@blueprintjs/core';
-import { FormattedMessage as T, FFormGroup, FInputGroup } from '@/components';
+import intl from 'react-intl-universal';
+import { FFormGroup, FInputGroup } from '@/components';
 
-export default function CustomerFormAfterPrimarySection({}) {
+export function CustomerFormAfterPrimarySection() {
   return (
-    <div className={'customer-form__after-primary-section-content'}>
+    <div>
       {/*------------ Customer email -----------*/}
-      <FFormGroup
-        name={'email'}
-        label={<T id={'customer_email'} />}
-        inline={true}
-      >
-        <FInputGroup name={'email'} />
+      <FFormGroup name={'email'} label={intl.get('customer_email')} inline>
+        <FInputGroup name={'email'} fill />
       </FFormGroup>
 
       {/*------------ Phone number -----------*/}
       <FFormGroup
-        name={'personal_phone'}
-        label={<T id={'phone_number'} />}
-        inline={true}
+        name={'personalPhone'}
+        label={intl.get('phone_number')}
+        inline
       >
-        <ControlGroup>
+        <ControlGroup fill>
           <FInputGroup
-            name={'personal_phone'}
+            name={'personalPhone'}
             placeholder={intl.get('personal')}
+            fill
           />
-          <FInputGroup name={'work_phone'} placeholder={intl.get('work')} />
+          <FInputGroup name={'workPhone'} placeholder={intl.get('work')} fill />
         </ControlGroup>
       </FFormGroup>
 
       {/*------------ Customer website -----------*/}
-      <FFormGroup name={'website'} label={<T id={'website'} />} inline={true}>
-        <FInputGroup name={'website'} placeholder={'http://'} />
+      <FFormGroup name={'website'} label={intl.get('website')} inline>
+        <FInputGroup name={'website'} placeholder={'http://'} fill />
       </FFormGroup>
     </div>
   );

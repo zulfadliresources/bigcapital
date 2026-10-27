@@ -23,7 +23,8 @@ export class SaleReceiptTransformer extends Transformer {
       'discountAmountFormatted',
       'discountPercentageFormatted',
       'adjustmentFormatted',
-      
+      'paidFormatted',
+
       'entries',
       'attachments',
     ];
@@ -139,22 +140,33 @@ export class SaleReceiptTransformer extends Transformer {
   };
 
   /**
-   * Retrieves the entries of the credit note.
-   * @param {ISaleReceipt} credit
+   * Retrieves the formatted paid amount of the sale receipt.
+   * @param {SaleReceipt} receipt
+   * @returns {string}
+   */
+  protected paidFormatted = (receipt: SaleReceipt): string => {
+    return this.formatNumber(receipt.paid, {
+      currencyCode: receipt.currencyCode,
+    });
+  };
+
+  /**
+   * Retrieves the entries of the sale receipt.
+   * @param {ISaleReceipt} receipt
    * @returns {}
    */
-  // protected entries = (receipt: SaleReceipt) => {
-  //   return this.item(receipt.entries, new ItemEntryTransformer(), {
-  //     currencyCode: receipt.currencyCode,
-  //   });
-  // };
+  protected entries = (receipt: SaleReceipt) => {
+    return this.item(receipt.entries, new ItemEntryTransformer(), {
+      currencyCode: receipt.currencyCode,
+    });
+  };
 
   /**
    * Retrieves the sale receipt attachments.
    * @param {SaleReceipt} receipt
    * @returns
    */
-  // protected attachments = (receipt: SaleReceipt) => {
-  //   return this.item(receipt.attachments, new AttachmentTransformer());
-  // };
+  protected attachments = (receipt: SaleReceipt) => {
+    return this.item(receipt.attachments, new AttachmentTransformer());
+  };
 }

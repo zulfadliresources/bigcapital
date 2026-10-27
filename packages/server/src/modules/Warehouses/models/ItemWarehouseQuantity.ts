@@ -1,12 +1,23 @@
 import { BaseModel } from '@/models/Model';
 import { Model } from 'objection';
 
-export class ItemWarehouseQuantity extends BaseModel{
+export class ItemWarehouseQuantity extends BaseModel {
+  itemId!: number;
+  warehouseId!: number;
+  quantityOnHand!: number;
+
   /**
    * Table name.
    */
   static get tableName() {
     return 'items_warehouses_quantity';
+  }
+
+  /**
+   * Timestamps columns.
+   */
+  get timestamps() {
+    return [];
   }
 
   /**

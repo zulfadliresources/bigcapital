@@ -1,4 +1,4 @@
-import * as request from 'supertest';
+import request = require('supertest');
 import { faker } from '@faker-js/faker';
 import { app, AuthorizationHeader, orgainzationId } from './init-app-test';
 
@@ -23,7 +23,7 @@ const makeManualJournalRequest = () => ({
   ],
 });
 
-describe.only('Manual Journals (e2e)', () => {
+describe('Manual Journals (e2e)', () => {
   it('/manual-journals (POST)', () => {
     return request(app.getHttpServer())
       .post('/manual-journals')
@@ -59,12 +59,41 @@ describe.only('Manual Journals (e2e)', () => {
 
     const journalId = response.body.id;
 
-    return request(app.getHttpServer())
+    const getResponse = await request(app.getHttpServer())
       .get(`/manual-journals/${journalId}`)
       .set('organization-id', orgainzationId)
       .set('Authorization', AuthorizationHeader)
       .send()
       .expect(200);
+
+    // `DATE` columns are served as `YYYY-MM-DD` calendar dates, while
+    // timestamp columns keep their full ISO datetime.
+    expect(getResponse.body.date).toBe('2022-06-01');
+    expect(getResponse.body.created_at).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
+    );
+    // A journal without an explicit accounting basis is general.
+    expect(getResponse.body.basis).toBeNull();
+
+    return getResponse;
+  });
+
+  it('/manual-journals (POST) persists the accounting basis', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/manual-journals')
+      .set('organization-id', orgainzationId)
+      .set('Authorization', AuthorizationHeader)
+      .send({ ...makeManualJournalRequest(), basis: 'cash' })
+      .expect(201);
+
+    const getResponse = await request(app.getHttpServer())
+      .get(`/manual-journals/${response.body.id}`)
+      .set('organization-id', orgainzationId)
+      .set('Authorization', AuthorizationHeader)
+      .send()
+      .expect(200);
+
+    expect(getResponse.body.basis).toBe('cash');
   });
 
   it('/manual-journals/:id (PUT)', async () => {
@@ -85,7 +114,34 @@ describe.only('Manual Journals (e2e)', () => {
       .expect(200);
   });
 
-  it('/manual-journals/:id/publish (PUT)', async () => {
+  it('/manual-journals (GET) honors page and pageSize query params', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/manual-journals?page=2&pageSize=5')
+      .set('organization-id', orgainzationId)
+      .set('Authorization', AuthorizationHeader)
+      .expect(200);
+
+    expect(response.body.pagination).toBeDefined();
+    expect(response.body.pagination.page).toBe(2);
+    expect(response.body.pagination.page_size).toBe(5);
+    // Ensure data array present
+    expect(Array.isArray(response.body.data)).toBe(true);
+  });
+
+  it('/manual-journals (GET) defaults to page 1 pageSize 12 when params absent', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/manual-journals')
+      .set('organization-id', orgainzationId)
+      .set('Authorization', AuthorizationHeader)
+      .expect(200);
+
+    expect(response.body.pagination).toBeDefined();
+    expect(response.body.pagination.page).toBe(1);
+    expect(response.body.pagination.page_size).toBe(12);
+    expect(Array.isArray(response.body.data)).toBe(true);
+  });
+
+  it('/manual-journals/:id/publish (PATCH)', async () => {
     const response = await request(app.getHttpServer())
       .post('/manual-journals')
       .set('organization-id', orgainzationId)
@@ -95,7 +151,7 @@ describe.only('Manual Journals (e2e)', () => {
     const journalId = response.body.id;
 
     return request(app.getHttpServer())
-      .put(`/manual-journals/${journalId}/publish`)
+      .patch(`/manual-journals/${journalId}/publish`)
       .set('organization-id', orgainzationId)
       .set('Authorization', AuthorizationHeader)
       .send()

@@ -1,5 +1,3 @@
-// @ts-nocheck
-import React, { useState } from 'react';
 import {
   Button,
   Classes,
@@ -8,9 +6,16 @@ import {
   Intent,
   Alignment,
 } from '@blueprintjs/core';
-
+import * as FF from 'fp-ts/function';
+import { isEmpty } from 'lodash';
+import React from 'react';
 import { useHistory } from 'react-router-dom';
-
+import { useBillsListContext } from './BillsListProvider';
+import { useBulkDeleteBillsDialog } from './hooks/use-bulk-delete-bills-dialog';
+import { withBills } from './withBills';
+import { withBillsActions } from './withBillsActions';
+import type { WithBillsProps } from './withBills';
+import type { WithDialogActionsProps } from '@/containers/Dialog/withDialogActions';
 import {
   If,
   Can,
@@ -23,80 +28,87 @@ import {
   DashboardActionsBar,
 } from '@/components';
 import { BillAction, AbilitySubject } from '@/constants/abilityOption';
-
-import { withBills } from './withBills';
-import { withBillsActions } from './withBillsActions';
-import { withSettings } from '@/containers/Settings/withSettings';
-import { withSettingsActions } from '@/containers/Settings/withSettingsActions';
+import { DialogsName } from '@/constants/dialogs';
 import { withDialogActions } from '@/containers/Dialog/withDialogActions';
-
-import { useBillsListContext } from './BillsListProvider';
+import { useSaveSettings } from '@/hooks/query';
 import { useRefreshBills } from '@/hooks/query/bills';
 import { useDownloadExportPdf } from '@/hooks/query/FinancialReports/use-export-pdf';
 
-import { compose } from '@/utils';
-import { DialogsName } from '@/constants/dialogs';
+interface WithBillsActionsProps {
+  setBillsTableState: (state: Record<string, any>) => void;
+}
 
-/**
- * Bills actions bar.
- */
+interface BillActionsBarProps
+  extends Pick<WithBillsProps, 'billsSelectedRows'>,
+    WithBillsActionsProps,
+    WithDialogActionsProps {
+  billsConditionsRoles: any[];
+}
+
 function BillActionsBar({
-  // #withBillsActions
   setBillsTableState,
-
-  // #withBills
   billsConditionsRoles,
-
-  // #withSettings
-  billsTableSize,
-
-  // #withSettingsActions
-  addSetting,
-
-  // #withDialogActions
+  billsSelectedRows,
   openDialog,
-}) {
-  const history = useHistory();
+}: BillActionsBarProps) {
+  const { mutateAsync: saveSettings } = useSaveSettings();
 
-  // Bills refresh action.
+  const history = useHistory();
   const { refresh } = useRefreshBills();
 
-  // Bills list context.
-  const { billsViews, fields } = useBillsListContext();
+  const { billsViews, fields, billSettings } = useBillsListContext();
+  const billsTableSize = billSettings?.tableSize as string | undefined;
 
-  // Exports pdf document.
   const { downloadAsync: downloadExportPdf } = useDownloadExportPdf();
 
-  // Handle click a new bill.
   const handleClickNewBill = () => {
     history.push('/bills/new');
   };
-  // Handle tab change.
-  const handleTabChange = (view) => {
+  const handleTabChange = (view: { slug?: string } | null) => {
     setBillsTableState({
       viewSlug: view ? view.slug : null,
     });
   };
-  // Handle click a refresh bills
   const handleRefreshBtnClick = () => {
     refresh();
   };
-  // Handle table row size change.
-  const handleTableRowSizeChange = (size) => {
-    addSetting('bills', 'tableSize', size);
+  const handleTableRowSizeChange = (size: any) => {
+    saveSettings({
+      options: [{ group: 'bills', key: 'tableSize', value: size }],
+    });
   };
-  // Handle the import button click.
   const handleImportBtnClick = () => {
     history.push('/bills/import');
   };
-  // Handle the export button click.
   const handleExportBtnClick = () => {
     openDialog(DialogsName.Export, { resource: 'bill' });
   };
-  // Handle the print button click.
   const handlePrintBtnClick = () => {
     downloadExportPdf({ resource: 'Bill' });
   };
+  const { openBulkDeleteDialog, isValidatingBulkDeleteBills } =
+    useBulkDeleteBillsDialog();
+
+  const handleBulkDelete = () => {
+    openBulkDeleteDialog(billsSelectedRows as number[]);
+  };
+
+  if (!isEmpty(billsSelectedRows)) {
+    return (
+      <DashboardActionsBar>
+        <NavbarGroup>
+          <Button
+            className={Classes.MINIMAL}
+            icon={<Icon icon="trash-16" iconSize={16} />}
+            text={<T id={'delete'} />}
+            intent={Intent.DANGER}
+            onClick={handleBulkDelete}
+            disabled={isValidatingBulkDeleteBills}
+          />
+        </NavbarGroup>
+      </DashboardActionsBar>
+    );
+  }
 
   return (
     <DashboardActionsBar>
@@ -122,7 +134,7 @@ function BillActionsBar({
             conditions: billsConditionsRoles,
             defaultFieldKey: 'bill_number',
             fields: fields,
-            onFilterChange: (filterConditions) => {
+            onFilterChange: (filterConditions: any) => {
               setBillsTableState({ filterRoles: filterConditions });
             },
           }}
@@ -143,7 +155,7 @@ function BillActionsBar({
         <NavbarDivider />
         <Button
           className={Classes.MINIMAL}
-          icon={<Icon icon={'print-16'} iconSize={'16'} />}
+          icon={<Icon icon={'print-16'} iconSize={16} />}
           text={<T id={'print'} />}
           onClick={handlePrintBtnClick}
         />
@@ -155,7 +167,7 @@ function BillActionsBar({
         />
         <Button
           className={Classes.MINIMAL}
-          icon={<Icon icon={'file-export-16'} iconSize={'16'} />}
+          icon={<Icon icon={'file-export-16'} iconSize={16} />}
           text={<T id={'export'} />}
           onClick={handleExportBtnClick}
         />
@@ -177,14 +189,12 @@ function BillActionsBar({
   );
 }
 
-export default compose(
-  withBillsActions,
-  withSettingsActions,
-  withBills(({ billsTableState }) => ({
-    billsConditionsRoles: billsTableState.filterRoles,
-  })),
-  withSettings(({ billsettings }) => ({
-    billsTableSize: billsettings?.tableSize,
-  })),
+export const BillsActionsBar = FF.pipe(
+  BillActionsBar,
   withDialogActions,
-)(BillActionsBar);
+  withBills(({ billsTableState, billsSelectedRows }) => ({
+    billsConditionsRoles: billsTableState.filterRoles,
+    billsSelectedRows,
+  })),
+  withBillsActions,
+);

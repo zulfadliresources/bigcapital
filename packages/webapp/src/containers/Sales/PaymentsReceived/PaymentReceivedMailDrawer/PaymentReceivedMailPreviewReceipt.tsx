@@ -1,10 +1,10 @@
 import { css } from '@emotion/css';
 import { ComponentType } from 'react';
+import { PaymentReceivedMailPreviewHeader } from './PaymentReceivedMailPreviewHeader';
 import {
   PaymentReceivedMailReceipt,
   PaymentReceivedMailReceiptProps,
 } from './PaymentReceivedMailReceipt';
-import { PaymentReceivedMailPreviewHeader } from './PaymentReceivedMailPreviewHeader';
 import { withPaymentReceivedMailReceiptPreviewProps } from './withPaymentReceivedMailReceiptPreviewProps';
 import { Stack } from '@/components';
 
@@ -18,7 +18,7 @@ const mailReceiptCss = css`
 
 export function PaymentReceivedMailPreviewReceipt() {
   return (
-    <Stack flex={1}>
+    <Stack flex={1} spacing={0}>
       <PaymentReceivedMailPreviewHeader />
 
       <Stack px={4} py={6}>

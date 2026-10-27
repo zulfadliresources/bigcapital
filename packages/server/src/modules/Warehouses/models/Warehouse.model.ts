@@ -1,5 +1,5 @@
 // import { Model } from 'objection';
-import { BaseModel, BaseQueryBuilder } from '@/models/Model';
+import { BaseModel } from '@/models/Model';
 import { Item } from '@/modules/Items/models/Item';
 import { Model } from 'objection';
 
@@ -24,7 +24,7 @@ export class Warehouse extends BaseModel {
    * Timestamps columns.
    */
   get timestamps() {
-    return ['created_at', 'updated_at'];
+    return ['createdAt', 'updatedAt'];
   }
 
   /**

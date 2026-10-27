@@ -3,16 +3,14 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Post,
   Put,
   Query,
 } from '@nestjs/common';
 import { ItemCategoryApplication } from './ItemCategory.application';
-import {
-  GetItemCategoriesResponse,
-  IItemCategoriesFilter,
-} from './ItemCategory.interfaces';
+import { GetItemCategoriesResponse } from './ItemCategory.interfaces';
 import {
   ApiExtraModels,
   ApiOperation,
@@ -24,12 +22,18 @@ import {
   CreateItemCategoryDto,
   EditItemCategoryDto,
 } from './dtos/ItemCategory.dto';
+import { GetItemCategoriesQueryDto } from './dtos/GetItemCategoriesQuery.dto';
 import { ItemCategoryResponseDto } from './dtos/ItemCategoryResponse.dto';
+import {
+  BulkDeleteItemCategoriesDto,
+  ValidateBulkDeleteItemCategoriesResponseDto,
+} from './dtos/BulkDeleteItemCategories.dto';
 import { ApiCommonHeaders } from '@/common/decorators/ApiCommonHeaders';
 
 @Controller('item-categories')
 @ApiTags('Item Categories')
 @ApiExtraModels(ItemCategoryResponseDto)
+@ApiExtraModels(ValidateBulkDeleteItemCategoriesResponseDto)
 @ApiCommonHeaders()
 export class ItemCategoryController {
   constructor(
@@ -53,7 +57,7 @@ export class ItemCategoryController {
     },
   })
   async getItemCategories(
-    @Query() filterDTO: Partial<IItemCategoriesFilter>,
+    @Query() filterDTO: GetItemCategoriesQueryDto,
   ): Promise<GetItemCategoriesResponse> {
     return this.itemCategoryApplication.getItemCategories(filterDTO);
   }
@@ -76,6 +80,44 @@ export class ItemCategoryController {
   })
   async getItemCategory(@Param('id') id: number) {
     return this.itemCategoryApplication.getItemCategory(id);
+  }
+
+  @Post('validate-bulk-delete')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Validates which item categories can be deleted and returns counts of deletable and non-deletable item categories.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Validation completed. Returns counts and IDs of deletable and non-deletable item categories.',
+    schema: {
+      $ref: getSchemaPath(ValidateBulkDeleteItemCategoriesResponseDto),
+    },
+  })
+  async validateBulkDeleteItemCategories(
+    @Body() bulkDeleteDto: BulkDeleteItemCategoriesDto,
+  ): Promise<ValidateBulkDeleteItemCategoriesResponseDto> {
+    return this.itemCategoryApplication.validateBulkDeleteItemCategories(
+      bulkDeleteDto.ids,
+    );
+  }
+
+  @Post('bulk-delete')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Deletes multiple item categories in bulk.' })
+  @ApiResponse({
+    status: 200,
+    description: 'The item categories have been successfully deleted.',
+  })
+  async bulkDeleteItemCategories(
+    @Body() bulkDeleteDto: BulkDeleteItemCategoriesDto,
+  ): Promise<void> {
+    return this.itemCategoryApplication.bulkDeleteItemCategories(
+      bulkDeleteDto.ids,
+      { skipUndeletable: bulkDeleteDto.skipUndeletable ?? false },
+    );
   }
 
   @Delete(':id')

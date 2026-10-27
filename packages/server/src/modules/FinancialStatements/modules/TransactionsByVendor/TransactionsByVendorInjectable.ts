@@ -1,15 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-  ITransactionsByVendorsFilter,
-  ITransactionsByVendorsStatement,
-} from './TransactionsByVendor.types';
+import { ITransactionsByVendorsStatement } from './TransactionsByVendor.types';
 import { TransactionsByVendor } from './TransactionsByVendor';
 import { TransactionsByVendorRepository } from './TransactionsByVendorRepository';
 import { TransactionsByVendorMeta } from './TransactionsByVendorMeta';
 import { getTransactionsByVendorDefaultQuery } from './utils';
 import { events } from '@/common/events/events';
+import { TransactionsByVendorQueryDto } from './TransactionsByVendorQuery.dto';
 
 @Injectable()
 export class TransactionsByVendorsInjectable {
@@ -22,11 +20,11 @@ export class TransactionsByVendorsInjectable {
 
   /**
    * Retrieve transactions by by the customers.
-   * @param {ITransactionsByVendorsFilter} query - Transactions by vendors filter.
+   * @param {TransactionsByVendorQueryDto} query - Transactions by vendors filter.
    * @return {Promise<ITransactionsByVendorsStatement>}
    */
   public async transactionsByVendors(
-    query: ITransactionsByVendorsFilter,
+    query: TransactionsByVendorQueryDto,
   ): Promise<ITransactionsByVendorsStatement> {
     const filter = { ...getTransactionsByVendorDefaultQuery(), ...query };
 
@@ -36,13 +34,16 @@ export class TransactionsByVendorsInjectable {
     // Initialize the repository.
     await this.transactionsByVendorRepository.asyncInit();
 
-    // Transactions by customers data mapper.
+    // Retrieve the meta first to get date format.
+    const meta = await this.transactionsByVendorMeta.meta(filter);
+
+    // Transactions by vendors data mapper.
     const reportInstance = new TransactionsByVendor(
       this.transactionsByVendorRepository,
       filter,
       this.i18n,
+      { baseCurrency: meta.baseCurrency, dateFormat: meta.dateFormat },
     );
-    const meta = await this.transactionsByVendorMeta.meta(filter);
 
     // Triggers `onVendorTransactionsViewed` event.
     await this.eventPublisher.emitAsync(

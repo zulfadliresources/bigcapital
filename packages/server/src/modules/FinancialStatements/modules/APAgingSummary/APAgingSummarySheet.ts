@@ -1,5 +1,6 @@
 import { sum, isEmpty } from 'lodash';
-import * as R from 'ramda';
+import { flow } from 'fp-ts/function';
+import { when } from '@/common/fp';
 import {
   IAPAgingSummaryData,
   IAPAgingSummaryVendor,
@@ -14,6 +15,10 @@ import { allPassedConditionsPass } from '@/utils/all-conditions-passed';
 import { APAgingSummaryRepository } from './APAgingSummaryRepository';
 import { Bill } from '@/modules/Bills/models/Bill';
 import { APAgingSummaryQueryDto } from './APAgingSummaryQuery.dto';
+import {
+  IFinancialReportMeta,
+  DEFAULT_REPORT_META,
+} from '../../types/Report.types';
 
 export class APAgingSummarySheet extends AgingSummaryReport {
   readonly repository: APAgingSummaryRepository;
@@ -31,12 +36,15 @@ export class APAgingSummarySheet extends AgingSummaryReport {
   constructor(
     query: APAgingSummaryQueryDto,
     repository: APAgingSummaryRepository,
+    meta: IFinancialReportMeta,
   ) {
     super();
 
     this.query = query;
     this.repository = repository;
+    this.baseCurrency = meta.baseCurrency;
     this.numberFormat = this.query.numberFormat;
+    this.dateFormat = meta.dateFormat || DEFAULT_REPORT_META.dateFormat;
 
     this.overdueInvoicesByContactId = this.repository.overdueBillsByVendorId;
     this.currentInvoicesByContactId = this.repository.dueBillsByVendorId;
@@ -148,9 +156,9 @@ export class APAgingSummarySheet extends AgingSummaryReport {
   private vendorsSection = (
     vendors: ModelObject<Vendor>[],
   ): IAPAgingSummaryVendor[] => {
-    return R.compose(
-      R.when(this.isVendorNodesFilter, this.vendorsFilter),
+    return flow(
       this.vendorsMapper,
+      when(this.isVendorNodesFilter, this.vendorsFilter),
     )(vendors);
   };
 

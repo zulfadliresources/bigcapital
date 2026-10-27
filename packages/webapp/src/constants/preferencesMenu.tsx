@@ -1,8 +1,9 @@
-// @ts-nocheck
 import React from 'react';
+import type { PreferencesMenuItem } from './types';
 import { FormattedMessage as T } from '@/components';
+import { Features } from '@/constants/features';
 
-export default [
+export const PreferencesMenu: PreferencesMenuItem[] = [
   {
     text: <T id={'general'} />,
     disabled: false,
@@ -13,17 +14,17 @@ export default [
     disabled: false,
     href: '/preferences/branding',
   },
-  {
-    text: 'Billing',
-    href: '/preferences/billing',
-  },
+  // {
+  //   text: 'Billing',
+  //   href: '/preferences/billing',
+  // },
   {
     text: <T id={'users'} />,
     href: '/preferences/users',
   },
   {
     text: 'Payment Methods',
-    href: '/preferences/payment-methods'
+    href: '/preferences/payment-methods',
   },
   {
     text: <T id={'preferences.estimates'} />,
@@ -59,23 +60,29 @@ export default [
     href: '/preferences/accountant',
   },
   {
+    text: <T id={'features.label'} />,
+    disabled: false,
+    href: '/preferences/features',
+  },
+  {
     text: <T id={'items'} />,
     disabled: false,
     href: '/preferences/items',
   },
-  {
-    text: 'Integrations',
-    disabled: false,
-    href: '/preferences/integrations'
-  },
+  // {
+  //   text: 'Integrations',
+  //   disabled: false,
+  //   href: '/preferences/integrations'
+  // },
   {
     text: 'API Keys',
     disabled: false,
     href: '/preferences/api-keys',
   },
-  // {
-  //   text: <T id={'sms_integration.label'} />,
-  //   disabled: false,
-  //   href: '/preferences/sms-message',
-  // },
+  {
+    text: <T id={'sms_integration.label'} />,
+    disabled: false,
+    href: '/preferences/sms-message',
+    feature: Features.SmsNotifications,
+  },
 ];

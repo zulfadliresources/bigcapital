@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Inject, Injectable, Scope } from '@nestjs/common';
 // import { IAccountDTO, IAccount, IAccountCreateDTO } from './Accounts.types';
 // import AccountTypesUtils from '@/lib/AccountTypes';
@@ -17,7 +16,7 @@ export class CommandAccountValidators {
     @Inject(Account.name)
     private readonly accountModel: TenantModelProxy<typeof Account>,
     private readonly accountRepository: AccountRepository,
-  ) { }
+  ) {}
 
   /**
    * Throws error if the account was prefined.
@@ -107,6 +106,20 @@ export class CommandAccountValidators {
   }
 
   /**
+   * Throws error if account code is missing or blank when required.
+   * @param {string|undefined} code - Account code.
+   */
+  public validateAccountCodeRequiredOrThrow(code: string | undefined) {
+    const trimmed = typeof code === 'string' ? code.trim() : '';
+    if (!trimmed) {
+      throw new ServiceError(
+        ERRORS.ACCOUNT_CODE_REQUIRED,
+        'Account code is required.',
+      );
+    }
+  }
+
+  /**
    * Validates the account name uniquiness.
    * @param {string} accountName - Account name.
    * @param {number} notAccountId - Ignore the account id.
@@ -136,7 +149,7 @@ export class CommandAccountValidators {
    * @param {CreateAccountDTO | EditAccountDTO} accountDTO -
    */
   public validateAccountTypeSupportCurrency = (
-    accountDTO: CreateAccountDTO | EditAccountDTO,
+    accountDTO: CreateAccountDTO,
     baseCurrency: string,
   ) => {
     // Can't continue to validate the type has multi-currency feature
@@ -161,7 +174,7 @@ export class CommandAccountValidators {
    * @throws {ServiceError(ERRORS.ACCOUNT_CURRENCY_NOT_SAME_PARENT_ACCOUNT)}
    */
   public validateCurrentSameParentAccount = (
-    accountDTO: CreateAccountDTO | EditAccountDTO,
+    accountDTO: CreateAccountDTO,
     parentAccount: Account,
     baseCurrency: string,
   ) => {
@@ -187,7 +200,7 @@ export class CommandAccountValidators {
    * @param {IAccount} parentAccount
    */
   public throwErrorIfParentHasDiffType(
-    accountDTO: CreateAccountDTO | EditAccountDTO,
+    accountDTO: CreateAccountDTO,
     parentAccount: Account,
   ) {
     if (accountDTO.accountType !== parentAccount.accountType) {

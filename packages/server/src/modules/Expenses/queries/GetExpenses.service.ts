@@ -3,7 +3,8 @@ import { ExpenseTransfromer } from './Expense.transformer';
 import { DynamicListService } from '@/modules/DynamicListing/DynamicList.service';
 import { TransformerInjectable } from '@/modules/Transformer/TransformerInjectable.service';
 import { Inject, Injectable } from '@nestjs/common';
-import { IExpensesFilter, IPaginationMeta } from '../Expenses.types';
+import { IPaginationMeta } from '../Expenses.types';
+import { GetExpensesQueryDto } from '../dtos/GetExpensesQuery.dto';
 import { Expense } from '../models/Expense.model';
 import { IFilterMeta } from '@/interfaces/Model';
 import { TenantModelProxy } from '@/modules/System/models/TenantBaseModel';
@@ -20,11 +21,11 @@ export class GetExpensesService {
 
   /**
    * Retrieve expenses paginated list.
-   * @param  {IExpensesFilter} expensesFilter
+   * @param  {GetExpensesQueryDto} filterDTO
    * @return {IExpense[]}
    */
-  public async getExpensesList(filterDto: Partial<IExpensesFilter>): Promise<{
-    expenses: Expense[];
+  public async getExpensesList(filterDTO: GetExpensesQueryDto): Promise<{
+    data: Expense[];
     pagination: IPaginationMeta;
     filterMeta: IFilterMeta;
   }> {
@@ -33,7 +34,7 @@ export class GetExpensesService {
       columnSortBy: 'created_at',
       page: 1,
       pageSize: 12,
-      ...filterDto,
+      ...filterDTO,
     };
     // Parses list filter DTO.
     const filter = this.parseListFilterDTO(_filterDto);
@@ -51,17 +52,19 @@ export class GetExpensesService {
         builder.withGraphFetched('categories.expenseAccount');
 
         dynamicList.buildQuery()(builder);
-        _filterDto?.filterQuery && _filterDto?.filterQuery(builder);
+        if (_filterDto?.filterQuery) {
+          _filterDto?.filterQuery(builder);
+        }
       })
       .pagination(filter.page - 1, filter.pageSize);
 
     // Transformes the expenses models to POJO.
-    const expenses = await this.transformer.transform(
+    const data = await this.transformer.transform(
       results,
       new ExpenseTransfromer(),
     );
     return {
-      expenses,
+      data,
       pagination,
       filterMeta: dynamicList.getResponseMeta(),
     };

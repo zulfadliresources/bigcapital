@@ -1,12 +1,11 @@
 import * as R from 'ramda';
-import { Knex } from 'knex';
 import { Inject, Injectable } from '@nestjs/common';
 import { SaleInvoiceTransformer } from './SaleInvoice.transformer';
 import { TransformerInjectable } from '@/modules/Transformer/TransformerInjectable.service';
 import { DynamicListService } from '@/modules/DynamicListing/DynamicList.service';
 import { IFilterMeta, IPaginationMeta } from '@/interfaces/Model';
 import { SaleInvoice } from '../models/SaleInvoice';
-import { ISalesInvoicesFilter } from '../SaleInvoice.types';
+import { GetSaleInvoicesQueryDto } from '../dtos/GetSaleInvoicesQuery.dto';
 import { TenantModelProxy } from '@/modules/System/models/TenantBaseModel';
 
 @Injectable()
@@ -21,13 +20,11 @@ export class GetSaleInvoicesService {
 
   /**
    * Retrieve sales invoices filterable and paginated list.
-   * @param {ISalesInvoicesFilter} filterDTO -
-   * @returns {Promise<{ salesInvoices: SaleInvoice[]; pagination: IPaginationMeta; filterMeta: IFilterMeta; }>}
+   * @param {GetSaleInvoicesQueryDto} filterDTO -
+   * @returns {Promise<{ data: SaleInvoice[]; pagination: IPaginationMeta; filterMeta: IFilterMeta; }>}
    */
-  public async getSaleInvoices(
-    filterDTO: Partial<ISalesInvoicesFilter>,
-  ): Promise<{
-    salesInvoices: SaleInvoice[];
+  public async getSaleInvoices(filterDTO: GetSaleInvoicesQueryDto): Promise<{
+    data: SaleInvoice[];
     pagination: IPaginationMeta;
     filterMeta: IFilterMeta;
   }> {
@@ -58,13 +55,13 @@ export class GetSaleInvoicesService {
       .pagination(filter.page - 1, filter.pageSize);
 
     // Retrieves the transformed sale invoices.
-    const salesInvoices = await this.transformer.transform(
+    const data = await this.transformer.transform(
       results,
       new SaleInvoiceTransformer(),
     );
 
     return {
-      salesInvoices,
+      data,
       pagination,
       filterMeta: dynamicFilter.getResponseMeta(),
     };

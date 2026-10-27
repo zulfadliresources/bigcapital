@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { events } from '@/common/events/events';
 import {
@@ -7,8 +7,6 @@ import {
 } from './InventoryValuationSheet.types';
 import { InventoryValuationMetaInjectable } from './InventoryValuationSheetMeta';
 import { getInventoryValuationDefaultQuery } from './_constants';
-import { InventoryCostLotTracker } from '@/modules/InventoryCost/models/InventoryCostLotTracker';
-import { Item } from '@/modules/Items/models/Item';
 import { InventoryValuationSheetRepository } from './InventoryValuationSheetRepository';
 import { InventoryValuationSheet } from './InventoryValuationSheet';
 
@@ -18,7 +16,7 @@ export class InventoryValuationSheetService {
     private readonly inventoryValuationMeta: InventoryValuationMetaInjectable,
     private readonly eventPublisher: EventEmitter2,
     private readonly inventoryValuationSheetRepository: InventoryValuationSheetRepository,
-  ) { }
+  ) {}
 
   /**
    * Inventory valuation sheet.
@@ -34,15 +32,16 @@ export class InventoryValuationSheetService {
     this.inventoryValuationSheetRepository.setFilter(filter);
     await this.inventoryValuationSheetRepository.asyncInit();
 
+    // Retrieves the inventorty valuation meta first to get date format.
+    const meta = await this.inventoryValuationMeta.meta(filter);
+
     const inventoryValuationInstance = new InventoryValuationSheet(
       filter,
       this.inventoryValuationSheetRepository,
+      { baseCurrency: meta.baseCurrency, dateFormat: meta.dateFormat },
     );
     // Retrieve the inventory valuation report data.
     const inventoryValuationData = inventoryValuationInstance.reportData();
-
-    // Retrieves the inventorty valuation meta.
-    const meta = await this.inventoryValuationMeta.meta(filter);
 
     // Triggers `onInventoryValuationViewed` event.
     await this.eventPublisher.emitAsync(

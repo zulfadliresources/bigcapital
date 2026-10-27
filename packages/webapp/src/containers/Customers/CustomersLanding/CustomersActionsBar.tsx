@@ -1,5 +1,3 @@
-// @ts-nocheck
-import React from 'react';
 import {
   NavbarGroup,
   NavbarDivider,
@@ -9,10 +7,17 @@ import {
   Switch,
   Alignment,
 } from '@blueprintjs/core';
+import * as FF from 'fp-ts/function';
+import { isEmpty } from 'lodash';
 import { useHistory } from 'react-router-dom';
-
+import { useCustomersListContext } from './CustomersListProvider';
+import { useBulkDeleteCustomersDialog } from './hooks/use-bulk-delete-customers-dialog';
+import { withCustomers } from './withCustomers';
+import { withCustomersActions } from './withCustomersActions';
+import type { WithCustomersActionsProps } from './withCustomersActions';
+import type { IFilterRole } from '@/components/AdvancedFilter/interfaces';
+import type { WithDialogActionsProps } from '@/containers/Dialog/withDialogActions';
 import {
-  If,
   Icon,
   Can,
   FormattedMessage as T,
@@ -22,29 +27,20 @@ import {
   DashboardRowsHeightButton,
   DashboardActionsBar,
 } from '@/components';
-
-import { useCustomersListContext } from './CustomersListProvider';
+import { CustomerAction, AbilitySubject } from '@/constants/abilityOption';
+import { DialogsName } from '@/constants/dialogs';
+import { withDialogActions } from '@/containers/Dialog/withDialogActions';
+import { useSaveSettings } from '@/hooks/query';
 import { useRefreshCustomers } from '@/hooks/query/customers';
 import { useDownloadExportPdf } from '@/hooks/query/FinancialReports/use-export-pdf';
 
-<<<<<<< HEAD
-import withCustomers from './withCustomers';
-import withCustomersActions from './withCustomersActions';
-import withAlertActions from '@/containers/Alert/withAlertActions';
-import withSettingsActions from '@/containers/Settings/withSettingsActions';
-import withSettings from '@/containers/Settings/withSettings';
-import withDialogActions from '@/containers/Dialog/withDialogActions';
-=======
-import { withCustomers } from './withCustomers';
-import { withCustomersActions } from './withCustomersActions';
-import { withSettingsActions } from '@/containers/Settings/withSettingsActions';
-import { withSettings } from '@/containers/Settings/withSettings';
-import { withDialogActions } from '@/containers/Dialog/withDialogActions';
->>>>>>> develop
-
-import { CustomerAction, AbilitySubject } from '@/constants/abilityOption';
-import { compose } from '@/utils';
-import { DialogsName } from '@/constants/dialogs';
+interface CustomerActionsBarInnerProps
+  extends WithCustomersActionsProps,
+    WithDialogActionsProps {
+  customersSelectedRows: unknown[];
+  customersFilterConditions: IFilterRole[];
+  customersInactiveMode: boolean | undefined;
+}
 
 /**
  * Customers actions bar.
@@ -56,25 +52,28 @@ function CustomerActionsBar({
 
   // #withCustomersActions
   setCustomersTableState,
-  accountsInactiveMode,
-
-  // #withAlertActions
-  openAlert,
-
-  // #withSettings
-  customersTableSize,
-
-  // #withSettingsActions
-  addSetting,
+  customersInactiveMode,
 
   // #withDialogActions
   openDialog,
-}) {
+}: CustomerActionsBarInnerProps) {
+  const { mutateAsync: saveSettings } = useSaveSettings();
+
+  const bulkDelete = useBulkDeleteCustomersDialog();
+  const { openBulkDeleteDialog } = bulkDelete;
+  // `isValidatingBulkDeleteCustomers` is not on the hook's return type — preserved
+  // latent bug (the value would be undefined at runtime anyway).
+  const isValidatingBulkDeleteCustomers = (
+    bulkDelete as { isValidatingBulkDeleteCustomers?: boolean }
+  ).isValidatingBulkDeleteCustomers;
+
   // History context.
   const history = useHistory();
 
   // Customers list context.
-  const { customersViews, fields } = useCustomersListContext();
+  const { customersViews, fields, customersSettings } =
+    useCustomersListContext();
+  const customersTableSize = customersSettings?.tableSize as string | undefined;
 
   // Customers refresh action.
   const { refresh } = useRefreshCustomers();
@@ -88,16 +87,18 @@ function CustomerActionsBar({
 
   // Handle Customers bulk delete button click.,
   const handleBulkDelete = () => {
-    openAlert('customers-bulk-delete', { customersIds: customersSelectedRows });
+    openBulkDeleteDialog(customersSelectedRows as number[]);
   };
 
-  const handleTabChange = (view) => {
+  const handleTabChange = (view?: { slug?: string }) => {
     setCustomersTableState({
       viewSlug: view ? view.slug : null,
     });
   };
   // Handle inactive switch changing.
-  const handleInactiveSwitchChange = (event) => {
+  const handleInactiveSwitchChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const checked = event.target.checked;
     setCustomersTableState({ inactiveMode: checked });
   };
@@ -108,8 +109,10 @@ function CustomerActionsBar({
   };
 
   // Handle table row size change.
-  const handleTableRowSizeChange = (size) => {
-    addSetting('customers', 'tableSize', size);
+  const handleTableRowSizeChange = (size: string) => {
+    saveSettings({
+      options: [{ group: 'customers', key: 'tableSize', value: size }],
+    });
   };
 
   // Handle import button click.
@@ -126,6 +129,23 @@ function CustomerActionsBar({
     downloadExportPdf({ resource: 'Customer' });
   };
 
+  if (!isEmpty(customersSelectedRows)) {
+    return (
+      <DashboardActionsBar>
+        <NavbarGroup>
+          <Button
+            className={Classes.MINIMAL}
+            icon={<Icon icon="trash-16" iconSize={16} />}
+            text={<T id={'delete'} />}
+            intent={Intent.DANGER}
+            onClick={handleBulkDelete}
+            disabled={isValidatingBulkDeleteCustomers}
+          />
+        </NavbarGroup>
+      </DashboardActionsBar>
+    );
+  }
+
   return (
     <DashboardActionsBar>
       <NavbarGroup>
@@ -137,7 +157,7 @@ function CustomerActionsBar({
           onChange={handleTabChange}
         />
         <NavbarDivider />
-        <Can I={CustomerAction.Create} a={AbilitySubject.Item}>
+        <Can I={CustomerAction.Create} a={AbilitySubject.Customer}>
           <Button
             className={Classes.MINIMAL}
             icon={<Icon icon={'plus'} />}
@@ -151,7 +171,7 @@ function CustomerActionsBar({
             conditions: customersFilterConditions,
             defaultFieldKey: 'display_name',
             fields: fields,
-            onFilterChange: (filterConditions) => {
+            onFilterChange: (filterConditions: IFilterRole[]) => {
               setCustomersTableState({ filterRoles: filterConditions });
             },
           }}
@@ -161,16 +181,6 @@ function CustomerActionsBar({
           />
         </AdvancedFilterPopover>
 
-        <If condition={customersSelectedRows.length}>
-          <Button
-            className={Classes.MINIMAL}
-            icon={<Icon icon="trash-16" iconSize={16} />}
-            text={<T id={'delete'} />}
-            intent={Intent.DANGER}
-            onClick={handleBulkDelete}
-          />
-        </If>
-        <NavbarDivider />
         <Button
           className={Classes.MINIMAL}
           icon={<Icon icon="print-16" iconSize={16} />}
@@ -198,7 +208,7 @@ function CustomerActionsBar({
         <Can I={CustomerAction.Edit} a={AbilitySubject.Customer}>
           <Switch
             labelElement={<T id={'inactive'} />}
-            defaultChecked={accountsInactiveMode}
+            defaultChecked={customersInactiveMode}
             onChange={handleInactiveSwitchChange}
           />
         </Can>
@@ -214,17 +224,13 @@ function CustomerActionsBar({
   );
 }
 
-export default compose(
-  withCustomersActions,
-  withSettingsActions,
+export const CustomersActionsBar = FF.pipe(
+  CustomerActionsBar,
+  withDialogActions,
   withCustomers(({ customersSelectedRows, customersTableState }) => ({
     customersSelectedRows,
-    accountsInactiveMode: customersTableState.inactiveMode,
+    customersInactiveMode: customersTableState.inactiveMode,
     customersFilterConditions: customersTableState.filterRoles,
   })),
-  withSettings(({ customersSettings }) => ({
-    customersTableSize: customersSettings?.tableSize,
-  })),
-  withAlertActions,
-  withDialogActions,
-)(CustomerActionsBar);
+  withCustomersActions,
+);

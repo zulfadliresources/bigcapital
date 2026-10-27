@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsNumber,
   IsString,
+  ValidateIf,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, ToNumber } from '@/common/decorators/Validators';
@@ -40,10 +41,14 @@ export class CreateCustomerDto extends ContactAddressDto {
 
   @ApiProperty({
     required: false,
-    description: 'Opening balance date',
+    description:
+      'Opening balance date (required when openingBalance is provided)',
     example: '2024-01-01',
   })
-  @IsOptional()
+  @ValidateIf((o) => o.openingBalance != null)
+  @IsNotEmpty({
+    message: 'openingBalanceAt is required when openingBalance is provided',
+  })
   @IsString()
   openingBalanceAt?: string;
 
@@ -153,4 +158,13 @@ export class CreateCustomerDto extends ContactAddressDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @ApiProperty({
+    required: false,
+    description: 'Customer code',
+    example: 'CUST-001',
+  })
+  @IsOptional()
+  @IsString()
+  code?: string;
 }

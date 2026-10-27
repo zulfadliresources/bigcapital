@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { TransactionsByReferenceService } from './TransactionsByReference.service';
-import { ITransactionsByReferenceQuery } from './TransactionsByReference.types';
+import { TransactionsByReferenceQueryDto } from './TransactionsByReferenceQuery.dto';
 
 @Injectable()
 export class TransactionsByReferenceApplication {
@@ -10,10 +10,10 @@ export class TransactionsByReferenceApplication {
 
   /**
    * Retrieve accounts transactions by given reference id and type.
-   * @param {ITransactionsByReferenceQuery} query - Transactions by reference query.
+   * @param {TransactionsByReferenceQueryDto} query - Transactions by reference query.
    * @returns {Promise<ITransactionsByReferencePojo>}
    */
-  public async getTransactions(query: ITransactionsByReferenceQuery) {
+  public async getTransactions(query: TransactionsByReferenceQueryDto) {
     return this.transactionsByReferenceService.getTransactionsByReference(
       query,
     );

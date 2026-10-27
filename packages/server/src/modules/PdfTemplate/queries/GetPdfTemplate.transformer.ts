@@ -1,5 +1,5 @@
 // import { getTransactionTypeLabel } from '@/utils/transactions-types';
-import { Transformer } from "../../Transformer/Transformer";
+import { Transformer } from '../../Transformer/Transformer';
 
 export class GetPdfTemplateTransformer extends Transformer {
   /**
@@ -7,7 +7,12 @@ export class GetPdfTemplateTransformer extends Transformer {
    * @returns {string[]}
    */
   public includeAttributes = (): string[] => {
-    return ['createdAtFormatted', 'resourceFormatted', 'attributes'];
+    return [
+      'createdAtFormatted',
+      'resourceFormatted',
+      'attributes',
+      'companyLogoUri',
+    ];
   };
 
   /**
@@ -24,8 +29,17 @@ export class GetPdfTemplateTransformer extends Transformer {
    * @param {Object} template -
    * @returns {string} A formatted string representing the creation date of the template.
    */
-  protected resourceFormatted = (template) => {
+  protected resourceFormatted = (_template) => {
     // return getTransactionTypeLabel(template.resource);
+  };
+
+  /**
+   * Retrieves the company logo URI.
+   * @param {Object} template
+   * @returns {string | null}
+   */
+  protected companyLogoUri = (template) => {
+    return template.companyLogoUri;
   };
 
   /**
@@ -36,7 +50,7 @@ export class GetPdfTemplateTransformer extends Transformer {
   protected attributes = (template) => {
     return this.item(
       template.attributes,
-      new GetPdfTemplateAttributesTransformer()
+      new GetPdfTemplateAttributesTransformer(),
     );
   };
 }

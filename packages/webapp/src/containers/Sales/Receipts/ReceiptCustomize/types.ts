@@ -1,8 +1,9 @@
-import { BrandingState, BrandingTemplateValues } from "@/containers/BrandingTemplates/types";
+import {
+  BrandingState,
+  BrandingTemplateValues,
+} from '@/containers/BrandingTemplates/types';
 
-export interface EstimateBrandingState extends BrandingState {
-
-}
+export interface EstimateBrandingState extends BrandingState {}
 
 export interface ReceiptCustomizeValues extends BrandingTemplateValues {
   // Colors

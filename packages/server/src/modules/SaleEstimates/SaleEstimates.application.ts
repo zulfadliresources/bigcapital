@@ -19,6 +19,9 @@ import {
   EditSaleEstimateDto,
 } from './dtos/SaleEstimate.dto';
 import { GetSaleEstimateMailStateService } from './queries/GetSaleEstimateMailState.service';
+import { BulkDeleteSaleEstimatesService } from './BulkDeleteSaleEstimates.service';
+import { ValidateBulkDeleteSaleEstimatesService } from './ValidateBulkDeleteSaleEstimates.service';
+import { SaleEstimateSmsNotification } from './SaleEstimateSmsNotification';
 
 @Injectable()
 export class SaleEstimatesApplication {
@@ -35,6 +38,9 @@ export class SaleEstimatesApplication {
     private readonly getSaleEstimateStateService: GetSaleEstimateState,
     private readonly saleEstimatesPdfService: GetSaleEstimatePdf,
     private readonly getSaleEstimateMailStateService: GetSaleEstimateMailStateService,
+    private readonly saleEstimateSmsNotificationService: SaleEstimateSmsNotification,
+    private readonly bulkDeleteSaleEstimatesService: BulkDeleteSaleEstimatesService,
+    private readonly validateBulkDeleteSaleEstimatesService: ValidateBulkDeleteSaleEstimatesService,
   ) {}
 
   /**
@@ -66,6 +72,31 @@ export class SaleEstimatesApplication {
    */
   public deleteSaleEstimate(estimateId: number) {
     return this.deleteSaleEstimateService.deleteEstimate(estimateId);
+  }
+
+  /**
+   * Deletes multiple sale estimates.
+   * @param {number[]} saleEstimateIds
+   * @return {Promise<void>}
+   */
+  public bulkDeleteSaleEstimates(
+    saleEstimateIds: number[],
+    options?: { skipUndeletable?: boolean },
+  ) {
+    return this.bulkDeleteSaleEstimatesService.bulkDeleteSaleEstimates(
+      saleEstimateIds,
+      options,
+    );
+  }
+
+  /**
+   * Validates which sale estimates can be deleted.
+   * @param {number[]} saleEstimateIds
+   */
+  public validateBulkDeleteSaleEstimates(saleEstimateIds: number[]) {
+    return this.validateBulkDeleteSaleEstimatesService.validateBulkDeleteSaleEstimates(
+      saleEstimateIds,
+    );
   }
 
   /**
@@ -117,20 +148,18 @@ export class SaleEstimatesApplication {
    * @returns {Promise<ISaleEstimate>}
    */
   public notifySaleEstimateBySms = async (saleEstimateId: number) => {
-    // return this.saleEstimateNotifyBySmsService.notifyBySms(
-    //   saleEstimateId,
-    // );
+    return this.saleEstimateSmsNotificationService.triggerSms(saleEstimateId);
   };
 
   /**
    * Retrieve the SMS details of the given payment receive transaction.
    * @param {number} saleEstimateId - Sale estimate ID.
-   * @returns {Promise<IPaymentReceivedSmsDetails>}
+   * @returns {Promise<Record<string, string>>}
    */
   public getSaleEstimateSmsDetails = (saleEstimateId: number) => {
-    // return this.saleEstimateNotifyBySmsService.smsDetails(
-    //   saleEstimateId,
-    // );
+    return this.saleEstimateSmsNotificationService.getSmsDetails(
+      saleEstimateId,
+    );
   };
 
   /**

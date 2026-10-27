@@ -1,35 +1,38 @@
-// @ts-nocheck
-import React from 'react';
-import styled from 'styled-components';
 import { Intent, Button } from '@blueprintjs/core';
 import { useFormikContext } from 'formik';
+import * as FF from 'fp-ts/function';
+import React from 'react';
+import styled from 'styled-components';
+import { useAllocateLandedConstDialogContext } from './AllocateLandedCostDialogProvider';
+import type { AllocateLandedCostFormValues } from './types';
+import type { WithDialogActionsProps } from '@/containers/Dialog/withDialogActions';
 import {
   DialogFooter,
   DialogFooterActions,
   FormattedMessage as T,
 } from '@/components';
-
-import { useAllocateLandedConstDialogContext } from './AllocateLandedCostDialogProvider';
 import { withDialogActions } from '@/containers/Dialog/withDialogActions';
-import { compose } from '@/utils';
+
+interface AllocateLandedCostFloatingActionsProps
+  extends Pick<WithDialogActionsProps, 'closeDialog'> {}
 
 /**
  * Allocate landed cost floating actions.
  * @returns {React.JSX}
  */
-function AllocateLandedCostFloatingActions({
+function AllocateLandedCostFloatingActionsInner({
   // #withDialogActions
   closeDialog,
-}) {
+}: AllocateLandedCostFloatingActionsProps) {
   // Formik context.
-  const { isSubmitting } = useFormikContext();
+  const { isSubmitting } = useFormikContext<AllocateLandedCostFormValues>();
 
   // Allocate landed cost dialog context.
   const { dialogName, costTransactionEntry, formattedUnallocatedCostAmount } =
     useAllocateLandedConstDialogContext();
 
   // Handle cancel button click.
-  const handleCancelBtnClick = (event) => {
+  const handleCancelBtnClick = (_event: React.MouseEvent<HTMLElement>) => {
     closeDialog(dialogName);
   };
 
@@ -38,7 +41,7 @@ function AllocateLandedCostFloatingActions({
       <DialogFooterActions alignment={'left'}>
         {costTransactionEntry && (
           <UnallocatedAmount>
-           <T id={'landed_cost.dialog.label_unallocated_cost_amount'}/>
+            <T id={'landed_cost.dialog.label_unallocated_cost_amount'} />
             <strong>{formattedUnallocatedCostAmount}</strong>
           </UnallocatedAmount>
         )}
@@ -61,18 +64,26 @@ function AllocateLandedCostFloatingActions({
   );
 }
 
-export default compose(withDialogActions)(AllocateLandedCostFloatingActions);
+export const AllocateLandedCostFloatingActions = FF.pipe(
+  AllocateLandedCostFloatingActionsInner,
+  withDialogActions,
+);
 
 const AllocateDialogFooter = styled(DialogFooter)`
   display: flex;
 `;
 
 const UnallocatedAmount = styled.div`
-  color: #3f5278;
+  --x-color-text: #3f5278;
+
+  .bp4-dark & {
+    --x-color-text: var(--color-light-gray1);
+  }
+  color: var(--x-color-text);
   align-self: center;
 
   strong {
-    color: #353535;
+    color: var(--x-color-text);
     padding-left: 4px;
   }
 `;

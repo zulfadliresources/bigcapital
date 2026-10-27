@@ -4,7 +4,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Item } from './models/Item';
 import { ItemEntry } from '../TransactionItemEntry/models/ItemEntry';
 import { ServiceError } from './ServiceError';
-import { IItemEntryDTO } from '../TransactionItemEntry/ItemEntry.types';
 import { TenantModelProxy } from '../System/models/TenantBaseModel';
 import { entriesAmountDiff } from '@/utils/entries-amount-diff';
 import { ItemEntryDto } from '../TransactionItemEntry/dto/ItemEntry.dto';
@@ -84,7 +83,9 @@ export class ItemsEntriesService {
    * @param {IItemEntryDTO[]} itemEntries - Items entries.
    * @returns {Promise<Item[]>}
    */
-  public async validateItemsIdsExistance(itemEntries: Array<{ itemId: number }>) {
+  public async validateItemsIdsExistance(
+    itemEntries: Array<{ itemId: number }>,
+  ) {
     const itemsIds = itemEntries.map((e) => e.itemId);
 
     const foundItems = await this.itemModel().query().whereIn('id', itemsIds);
@@ -130,9 +131,7 @@ export class ItemsEntriesService {
    * Validate the entries items that not purchase-able.
    * @param {IItemEntryDTO[]} itemEntries -
    */
-  public async validateNonPurchasableEntriesItems(
-    itemEntries: ItemEntryDto[],
-  ) {
+  public async validateNonPurchasableEntriesItems(itemEntries: ItemEntryDto[]) {
     const itemsIds = itemEntries.map((e: ItemEntryDto) => e.itemId);
     const purchasbleItems = await this.itemModel()
       .query()
@@ -184,11 +183,11 @@ export class ItemsEntriesService {
       'quantity',
       'itemId',
     );
-    diffEntries.forEach((entry: ItemEntry) => {
+    diffEntries.forEach((entry: { itemId: number; quantity: number }) => {
       const changeQuantityOper = this.itemModel()
         .query()
         .where({ id: entry.itemId, type: 'inventory' })
-        .modify('quantityOnHand', entry.quantity);
+        .modify('updateQuantityOnHand', entry.quantity);
 
       opers.push(changeQuantityOper);
     });
@@ -208,12 +207,12 @@ export class ItemsEntriesService {
    * @param {IItemEntry[]} entries - Items entries.
    */
   public async decrementItemsQuantity(entries: ItemEntry[]): Promise<void> {
-    // return this.changeItemsQuantity(
-    //   entries.map((entry) => ({
-    //     ...entry,
-    //     quantity: entry.quantity * -1,
-    //   })),
-    // );
+    return this.changeItemsQuantity(
+      entries.map((entry) => ({
+        ...entry,
+        quantity: entry.quantity * -1,
+      })) as ItemEntry[],
+    );
   }
 
   /**
@@ -225,6 +224,10 @@ export class ItemsEntriesService {
 
     return entries.map((entry) => {
       const item = items.find((i) => i.id === entry.itemId);
+
+      if (!item) {
+        throw new Error(`Item with id ${entry.itemId} not found`);
+      }
 
       return {
         ...entry,

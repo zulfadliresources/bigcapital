@@ -9,10 +9,9 @@ import { GetSaleReceipt } from './queries/GetSaleReceipt.service';
 import { EditSaleReceipt } from './commands/EditSaleReceipt.service';
 import {
   ISaleReceiptState,
-  ISalesReceiptsFilter,
-  SaleReceiptMailOpts,
   SaleReceiptMailOptsDTO,
 } from './types/SaleReceipts.types';
+import { GetSaleReceiptsQueryDto } from './dtos/GetSaleReceiptsQuery.dto';
 import { GetSaleReceiptsService } from './queries/GetSaleReceipts.service';
 import { SaleReceipt } from './models/SaleReceipt';
 import { IFilterMeta, IPaginationMeta } from '@/interfaces/Model';
@@ -22,6 +21,9 @@ import {
   EditSaleReceiptDto,
 } from './dtos/SaleReceipt.dto';
 import { GetSaleReceiptMailStateService } from './queries/GetSaleReceiptMailState.service';
+import { SaleReceiptSmsNotification } from './SaleReceiptSmsNotification';
+import { BulkDeleteSaleReceiptsService } from './BulkDeleteSaleReceipts.service';
+import { ValidateBulkDeleteSaleReceiptsService } from './ValidateBulkDeleteSaleReceipts.service';
 
 @Injectable()
 export class SaleReceiptApplication {
@@ -36,6 +38,9 @@ export class SaleReceiptApplication {
     private getSaleReceiptStateService: GetSaleReceiptState,
     private saleReceiptNotifyByMailService: SaleReceiptMailNotification,
     private getSaleReceiptMailStateService: GetSaleReceiptMailStateService,
+    private saleReceiptSmsNotificationService: SaleReceiptSmsNotification,
+    private bulkDeleteSaleReceiptsService: BulkDeleteSaleReceiptsService,
+    private validateBulkDeleteSaleReceiptsService: ValidateBulkDeleteSaleReceiptsService,
   ) {}
 
   /**
@@ -86,11 +91,35 @@ export class SaleReceiptApplication {
   }
 
   /**
+   * Deletes multiple sale receipts.
+   * @param {number[]} saleReceiptIds
+   */
+  public async bulkDeleteSaleReceipts(
+    saleReceiptIds: number[],
+    options?: { skipUndeletable?: boolean },
+  ) {
+    return this.bulkDeleteSaleReceiptsService.bulkDeleteSaleReceipts(
+      saleReceiptIds,
+      options,
+    );
+  }
+
+  /**
+   * Validates which sale receipts can be deleted.
+   * @param {number[]} saleReceiptIds
+   */
+  public async validateBulkDeleteSaleReceipts(saleReceiptIds: number[]) {
+    return this.validateBulkDeleteSaleReceiptsService.validateBulkDeleteSaleReceipts(
+      saleReceiptIds,
+    );
+  }
+
+  /**
    * Retrieve sales receipts paginated and filterable list.
-   * @param {ISalesReceiptsFilter} filterDTO
+   * @param {GetSaleReceiptsQueryDto} filterDTO
    * @returns
    */
-  public async getSaleReceipts(filterDTO: ISalesReceiptsFilter): Promise<{
+  public async getSaleReceipts(filterDTO: GetSaleReceiptsQueryDto): Promise<{
     data: SaleReceipt[];
     pagination: IPaginationMeta;
     filterMeta: IFilterMeta;
@@ -106,6 +135,24 @@ export class SaleReceiptApplication {
    */
   public async closeSaleReceipt(saleReceiptId: number) {
     return this.closeSaleReceiptService.closeSaleReceipt(saleReceiptId);
+  }
+
+  /**
+   * Notify the customer of the given sale receipt by SMS.
+   * @param {number} saleReceiptId - Sale receipt id.
+   * @returns {Promise<SaleReceipt>}
+   */
+  public notifySaleReceiptBySms(saleReceiptId: number) {
+    return this.saleReceiptSmsNotificationService.triggerSms(saleReceiptId);
+  }
+
+  /**
+   * Retrieve the SMS details of the given sale receipt.
+   * @param {number} saleReceiptId - Sale receipt id.
+   * @returns {Promise<Record<string, string>>}
+   */
+  public getSaleReceiptSmsDetails(saleReceiptId: number) {
+    return this.saleReceiptSmsNotificationService.getSmsDetails(saleReceiptId);
   }
 
   /**
@@ -154,9 +201,7 @@ export class SaleReceiptApplication {
    * Retrieves the mail state of the given sale receipt.
    * @param {number} saleReceiptId
    */
-  public getSaleReceiptMail(
-    saleReceiptId: number,
-  ): Promise<ISaleReceiptState> {
+  public getSaleReceiptMail(saleReceiptId: number): Promise<ISaleReceiptState> {
     return this.getSaleReceiptMailStateService.getMailState(saleReceiptId);
   }
 }

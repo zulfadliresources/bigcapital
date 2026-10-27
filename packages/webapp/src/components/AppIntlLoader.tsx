@@ -1,17 +1,15 @@
 // @ts-nocheck
-import React from 'react';
-import moment from 'moment';
-import { setLocale } from 'yup';
-import intl from 'react-intl-universal';
+import * as FF from 'fp-ts/function';
 import { find } from 'lodash';
+import moment from 'moment';
+import React from 'react';
+import intl from 'react-intl-universal';
 import rtlDetect from 'rtl-detect';
-import * as R from 'ramda';
-
-import { AppIntlProvider } from './AppIntlProvider';
-import { useSplashLoading } from '@/hooks/state';
-
+import { setLocale } from 'yup';
 import { useWatchImmediate } from '../hooks';
+import { AppIntlProvider } from './AppIntlProvider';
 import { withDashboardActions } from '@/containers/Dashboard/withDashboardActions';
+import { useSplashLoading } from '@/hooks/state';
 
 const SUPPORTED_LOCALES = [
   { name: 'English', value: 'en' },
@@ -36,15 +34,28 @@ function getCurrentLocal() {
 /**
  * Loads the localization data of the given locale.
  */
-function loadLocales(currentLocale) {
-  return import(`../lang/${currentLocale}/index.json`);
+async function loadLocales(currentLocale) {
+  return await import(`../lang/${currentLocale}/index.json`).then(
+    (module) => module.default,
+  );
 }
 
 /**
  * Loads the localization data of yup validation library.
  */
-function loadYupLocales(currentLocale) {
-  return import(`../lang/${currentLocale}/locale`);
+async function loadYupLocales(currentLocale) {
+  return await import(`../lang/${currentLocale}/locale.tsx`).then(
+    (module) => module.locale,
+  );
+}
+
+/**
+ * Dynamically loads the moment.js locale bundle for the given locale.
+ */
+async function loadMomentLocale(currentLocale) {
+  const momentLocale = transformMomentLocale(currentLocale);
+  if (momentLocale === 'en') return;
+  await import(`moment/locale/${momentLocale}`);
 }
 
 /**
@@ -84,6 +95,7 @@ function useAppLoadLocales(currentLocale) {
           },
         });
       })
+      .then(() => loadMomentLocale(currentLocale))
       .then(() => {
         moment.locale(transformMomentLocale(currentLocale));
         setIsLoading(false);
@@ -109,8 +121,8 @@ function useAppYupLoadLocales(currentLocale) {
 
   React.useEffect(() => {
     loadYupLocales(currentLocale)
-      .then(({ locale }) => {
-        setLocale(locale);
+      .then((results) => {
+        setLocale(results);
         setIsLoading(false);
       })
       .then(() => {});
@@ -154,4 +166,4 @@ function AppIntlLoader({ children }) {
   );
 }
 
-export default R.compose(withDashboardActions)(AppIntlLoader);
+export default FF.pipe(AppIntlLoader, withDashboardActions);

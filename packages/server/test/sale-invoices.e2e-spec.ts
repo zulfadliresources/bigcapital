@@ -1,4 +1,4 @@
-import * as request from 'supertest';
+import request = require('supertest');
 import { faker } from '@faker-js/faker';
 import { app, AuthorizationHeader, orgainzationId } from './init-app-test';
 
@@ -29,11 +29,21 @@ const requestSaleInvoiceBody = () => ({
 
 describe('Sale Invoices (e2e)', () => {
   beforeAll(async () => {
+    await request(app.getHttpServer())
+      .put('/transactions-locking/cancel-lock')
+      .set('organization-id', orgainzationId)
+      .set('Authorization', AuthorizationHeader)
+      .send({ reason: 'Cancel lock for e2e test' });
+
     const customer = await request(app.getHttpServer())
       .post('/customers')
       .set('organization-id', orgainzationId)
       .set('Authorization', AuthorizationHeader)
-      .send({ displayName: 'Test Customer' });
+      .send({
+        displayName: 'Test Customer',
+        customerType: 'business',
+        currencyCode: 'USD',
+      });
 
     customerId = customer.body.id;
 
@@ -42,7 +52,8 @@ describe('Sale Invoices (e2e)', () => {
       .set('organization-id', orgainzationId)
       .set('Authorization', AuthorizationHeader)
       .send({
-        name: faker.commerce.productName(),
+        name: `${faker.commerce.productName()} ${Date.now()}-${faker.string.alphanumeric({ length: 4 })}`,
+        type: 'service',
         sellable: true,
         purchasable: true,
         sellAccountId: 1026,
@@ -50,7 +61,7 @@ describe('Sale Invoices (e2e)', () => {
         costPrice: 100,
         sellPrice: 100,
       });
-    itemId = parseInt(item.text, 10);
+    itemId = item.body.id;
   });
 
   it('/sale-invoices (POST)', () => {
@@ -112,22 +123,26 @@ describe('Sale Invoices (e2e)', () => {
       .set('Authorization', AuthorizationHeader)
       .send(requestSaleInvoiceBody());
 
-    return request(app.getHttpServer())
+    const getResponse = await request(app.getHttpServer())
       .get(`/sale-invoices/${response.body.id}`)
       .set('organization-id', orgainzationId)
       .set('Authorization', AuthorizationHeader)
       .expect(200);
+
+    // `DATE` columns are served as `YYYY-MM-DD` calendar dates, while
+    // timestamp columns keep their full ISO datetime.
+    expect(getResponse.body.invoice_date).toBe('2023-01-01');
+    expect(getResponse.body.due_date).toBe('2023-02-01');
+    expect(getResponse.body.created_at).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
+    );
+
+    return getResponse;
   });
 
-  it('/sale-invoices/:id/state (GET)', async () => {
-    const response = await request(app.getHttpServer())
-      .post('/sale-invoices')
-      .set('organization-id', orgainzationId)
-      .set('Authorization', AuthorizationHeader)
-      .send(requestSaleInvoiceBody());
-
+  it('/sale-invoices/state (GET)', async () => {
     return request(app.getHttpServer())
-      .get(`/sale-invoices/${response.body.id}/state`)
+      .get('/sale-invoices/state')
       .set('organization-id', orgainzationId)
       .set('Authorization', AuthorizationHeader)
       .expect(200);
@@ -207,7 +222,7 @@ describe('Sale Invoices (e2e)', () => {
       .expect(200);
   });
 
-  it('/sale-invoices/:id/mail-state (GET)', async () => {
+  it('/sale-invoices/:id/mail (GET)', async () => {
     const response = await request(app.getHttpServer())
       .post('/sale-invoices')
       .set('organization-id', orgainzationId)
@@ -215,7 +230,7 @@ describe('Sale Invoices (e2e)', () => {
       .send(requestSaleInvoiceBody());
 
     return request(app.getHttpServer())
-      .get(`/sale-invoices/${response.body.id}/mail-state`)
+      .get(`/sale-invoices/${response.body.id}/mail`)
       .set('organization-id', orgainzationId)
       .set('Authorization', AuthorizationHeader)
       .expect(200);

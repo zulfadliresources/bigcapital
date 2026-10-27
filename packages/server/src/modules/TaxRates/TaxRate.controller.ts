@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { TaxRatesApplication } from './TaxRate.application';
 import {
@@ -18,15 +19,23 @@ import {
 import { CreateTaxRateDto, EditTaxRateDto } from './dtos/TaxRate.dto';
 import { TaxRateResponseDto } from './dtos/TaxRateResponse.dto';
 import { ApiCommonHeaders } from '@/common/decorators/ApiCommonHeaders';
+import { RequirePermission } from '@/modules/Roles/RequirePermission.decorator';
+import { PermissionGuard } from '@/modules/Roles/Permission.guard';
+import { AuthorizationGuard } from '@/modules/Roles/Authorization.guard';
+import { AbilitySubject } from '@/modules/Roles/Roles.types';
+import { TaxRateAction } from './TaxRates.types';
+import { SalesTaxFeatureGuard } from './SalesTaxFeatureGuard';
 
 @Controller('tax-rates')
 @ApiTags('Tax Rates')
 @ApiExtraModels(TaxRateResponseDto)
 @ApiCommonHeaders()
+@UseGuards(AuthorizationGuard, PermissionGuard, SalesTaxFeatureGuard)
 export class TaxRatesController {
-  constructor(private readonly taxRatesApplication: TaxRatesApplication) { }
+  constructor(private readonly taxRatesApplication: TaxRatesApplication) {}
 
   @Post()
+  @RequirePermission(TaxRateAction.CREATE, AbilitySubject.TaxRate)
   @ApiOperation({ summary: 'Create a new tax rate.' })
   @ApiResponse({
     status: 201,
@@ -38,6 +47,7 @@ export class TaxRatesController {
   }
 
   @Put(':id')
+  @RequirePermission(TaxRateAction.EDIT, AbilitySubject.TaxRate)
   @ApiOperation({ summary: 'Edit the given tax rate.' })
   @ApiResponse({
     status: 200,
@@ -54,6 +64,7 @@ export class TaxRatesController {
   }
 
   @Delete(':id')
+  @RequirePermission(TaxRateAction.DELETE, AbilitySubject.TaxRate)
   @ApiOperation({ summary: 'Delete the given tax rate.' })
   @ApiResponse({
     status: 200,
@@ -67,6 +78,7 @@ export class TaxRatesController {
   }
 
   @Get(':id')
+  @RequirePermission(TaxRateAction.VIEW, AbilitySubject.TaxRate)
   @ApiOperation({ summary: 'Retrieves the tax rate details.' })
   @ApiResponse({
     status: 200,
@@ -80,22 +92,19 @@ export class TaxRatesController {
   }
 
   @Get()
+  @RequirePermission(TaxRateAction.VIEW, AbilitySubject.TaxRate)
   @ApiOperation({ summary: 'Retrieves the tax rates.' })
   @ApiResponse({
     status: 200,
     description: 'The tax rates have been successfully retrieved.',
-    schema: {
-      type: 'array',
-      items: {
-        $ref: getSchemaPath(TaxRateResponseDto),
-      },
-    },
+    type: [TaxRateResponseDto],
   })
   public getTaxRates() {
     return this.taxRatesApplication.getTaxRates();
   }
 
   @Put(':id/activate')
+  @RequirePermission(TaxRateAction.EDIT, AbilitySubject.TaxRate)
   @ApiOperation({ summary: 'Activate the given tax rate.' })
   @ApiResponse({
     status: 200,
@@ -109,6 +118,7 @@ export class TaxRatesController {
   }
 
   @Put(':id/inactivate')
+  @RequirePermission(TaxRateAction.EDIT, AbilitySubject.TaxRate)
   @ApiOperation({ summary: 'Inactivate the given tax rate.' })
   @ApiResponse({
     status: 200,

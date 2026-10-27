@@ -17,16 +17,21 @@ import { PassportModule } from '@nestjs/passport';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { AuthMailSubscriber } from './subscribers/AuthMail.subscriber';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { BullModule } from '@nestjs/bullmq';
 import {
   SendResetPasswordMailQueue,
   SendSignupVerificationMailQueue,
+  JWT_ISSUER,
+  JWT_AUDIENCE,
 } from './Auth.constants';
 import { SendResetPasswordMailProcessor } from './processors/SendResetPasswordMail.processor';
 import { SendSignupVerificationMailProcessor } from './processors/SendSignupVerificationMail.processor';
 import { MailModule } from '../Mail/Mail.module';
 import { ConfigService } from '@nestjs/config';
 import { InjectSystemModel } from '../System/SystemModels/SystemModels.module';
+import { UserTenant } from '../System/models/UserTenant.model';
 import { GetAuthMetaService } from './queries/GetAuthMeta.service';
 import { AuthedController } from './Authed.controller';
 import { GetAuthenticatedAccount } from './queries/GetAuthedAccount.service';
@@ -44,6 +49,7 @@ import { GetApiKeysService } from './queries/GetApiKeys.service';
 const models = [
   InjectSystemModel(PasswordReset),
   InjectSystemModel(ApiKeyModel),
+  InjectSystemModel(UserTenant),
 ];
 
 @Module({
@@ -53,16 +59,41 @@ const models = [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get('jwt.secret'),
-        signOptions: { expiresIn: '1d', algorithm: 'HS384' },
-        verifyOptions: { algorithms: ['HS384'] },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const secret = configService.get<string>('jwt.secret');
+        if (!secret) {
+          throw new Error(
+            'APP_JWT_SECRET is not configured. The server refuses to sign or verify tokens with a default secret. Generate a strong secret (e.g. `openssl rand -base64 48`) and set it as APP_JWT_SECRET in your environment or .env file.',
+          );
+        }
+        return {
+          secret,
+          signOptions: {
+            expiresIn: '1d',
+            algorithm: 'HS384',
+            issuer: JWT_ISSUER,
+            audience: JWT_AUDIENCE,
+          },
+          verifyOptions: {
+            algorithms: ['HS384'],
+            issuer: JWT_ISSUER,
+            audience: JWT_AUDIENCE,
+          },
+        };
+      },
     }),
     TenantDBManagerModule,
     TenancyModule,
     BullModule.registerQueue({ name: SendResetPasswordMailQueue }),
     BullModule.registerQueue({ name: SendSignupVerificationMailQueue }),
+    BullBoardModule.forFeature({
+      name: SendResetPasswordMailQueue,
+      adapter: BullMQAdapter,
+    }),
+    BullBoardModule.forFeature({
+      name: SendSignupVerificationMailQueue,
+      adapter: BullMQAdapter,
+    }),
   ],
   exports: [...models],
   providers: [
@@ -98,4 +129,4 @@ const models = [
     AuthMailSubscriber,
   ],
 })
-export class AuthModule { }
+export class AuthModule {}

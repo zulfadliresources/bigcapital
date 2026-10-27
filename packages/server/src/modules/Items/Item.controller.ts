@@ -8,6 +8,8 @@ import {
   Get,
   Put,
   Query,
+  HttpCode,
+  UseGuards,
 } from '@nestjs/common';
 import { TenantController } from '../Tenancy/Tenant.controller';
 import { ItemsApplicationService } from './ItemsApplication.service';
@@ -29,6 +31,16 @@ import { ItemEstimatesResponseDto } from './dtos/ItemEstimatesResponse.dto';
 import { ItemBillsResponseDto } from './dtos/ItemBillsResponse.dto';
 import { ItemReceiptsResponseDto } from './dtos/ItemReceiptsResponse.dto';
 import { ApiCommonHeaders } from '@/common/decorators/ApiCommonHeaders';
+import {
+  BulkDeleteItemsDto,
+  ValidateBulkDeleteItemsResponseDto,
+} from './dtos/BulkDeleteItems.dto';
+import { ItemApiErrorResponseDto } from './dtos/ItemErrorResponse.dto';
+import { RequirePermission } from '@/modules/Roles/RequirePermission.decorator';
+import { PermissionGuard } from '@/modules/Roles/Permission.guard';
+import { AuthorizationGuard } from '@/modules/Roles/Authorization.guard';
+import { AbilitySubject } from '@/modules/Roles/Roles.types';
+import { ItemAction } from '@/interfaces/Item';
 
 @Controller('/items')
 @ApiTags('Items')
@@ -39,13 +51,17 @@ import { ApiCommonHeaders } from '@/common/decorators/ApiCommonHeaders';
 @ApiExtraModels(ItemBillsResponseDto)
 @ApiExtraModels(ItemEstimatesResponseDto)
 @ApiExtraModels(ItemReceiptsResponseDto)
+@ApiExtraModels(ValidateBulkDeleteItemsResponseDto)
+@ApiExtraModels(ItemApiErrorResponseDto)
 @ApiCommonHeaders()
+@UseGuards(AuthorizationGuard, PermissionGuard)
 export class ItemsController extends TenantController {
   constructor(private readonly itemsApplication: ItemsApplicationService) {
     super();
   }
 
   @Get()
+  @RequirePermission(ItemAction.VIEW, AbilitySubject.Item)
   @ApiOperation({ summary: 'Retrieves the item list.' })
   @ApiResponse({
     status: 200,
@@ -136,10 +152,19 @@ export class ItemsController extends TenantController {
    * @returns The updated item id.
    */
   @Put(':id')
+  @RequirePermission(ItemAction.EDIT, AbilitySubject.Item)
   @ApiOperation({ summary: 'Edit the given item (product or service).' })
   @ApiResponse({
     status: 200,
     description: 'The item has been successfully updated.',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Validation error. Possible error types: ITEM_NAME_EXISTS, INVENTORY_ACCOUNT_CANNOT_MODIFIED, TYPE_CANNOT_CHANGE_WITH_ITEM_HAS_TRANSACTIONS, etc.',
+    schema: {
+      $ref: getSchemaPath(ItemApiErrorResponseDto),
+    },
   })
   @ApiResponse({ status: 404, description: 'The item not found.' })
   @ApiParam({
@@ -151,27 +176,87 @@ export class ItemsController extends TenantController {
   async editItem(
     @Param('id') id: string,
     @Body() editItemDto: EditItemDto,
-  ): Promise<number> {
+  ): Promise<{ id: number; message: string }> {
     const itemId = parseInt(id, 10);
-    return this.itemsApplication.editItem(itemId, editItemDto);
+    await this.itemsApplication.editItem(itemId, editItemDto);
+    return { id: itemId, message: 'The item has been successfully updated.' };
+  }
+
+  @Post('validate-bulk-delete')
+  @HttpCode(200)
+  @RequirePermission(ItemAction.DELETE, AbilitySubject.Item)
+  @ApiOperation({
+    summary:
+      'Validates which items can be deleted and returns counts of deletable and non-deletable items.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Validation completed. Returns counts and IDs of deletable and non-deletable items.',
+    schema: {
+      $ref: getSchemaPath(ValidateBulkDeleteItemsResponseDto),
+    },
+  })
+  async validateBulkDeleteItems(
+    @Body() bulkDeleteDto: BulkDeleteItemsDto,
+  ): Promise<ValidateBulkDeleteItemsResponseDto> {
+    return this.itemsApplication.validateBulkDeleteItems(bulkDeleteDto.ids);
+  }
+
+  @Post('bulk-delete')
+  @HttpCode(200)
+  @RequirePermission(ItemAction.DELETE, AbilitySubject.Item)
+  @ApiOperation({ summary: 'Deletes multiple items in bulk.' })
+  @ApiResponse({
+    status: 200,
+    description: 'The items have been successfully deleted.',
+  })
+  async bulkDeleteItems(
+    @Body() bulkDeleteDto: BulkDeleteItemsDto,
+  ): Promise<void> {
+    return this.itemsApplication.bulkDeleteItems(bulkDeleteDto.ids, {
+      skipUndeletable: bulkDeleteDto.skipUndeletable ?? false,
+    });
   }
 
   @Post()
+  @RequirePermission(ItemAction.CREATE, AbilitySubject.Item)
   @ApiOperation({ summary: 'Create a new item (product or service).' })
   @ApiResponse({
     status: 200,
     description: 'The item has been successfully created.',
   })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Validation error. Possible error types: ITEM_NAME_EXISTS, ITEM_CATEOGRY_NOT_FOUND, COST_ACCOUNT_NOT_COGS, SELL_ACCOUNT_NOT_INCOME, INVENTORY_ACCOUNT_NOT_INVENTORY, INCOME_ACCOUNT_REQUIRED_WITH_SELLABLE_ITEM, COST_ACCOUNT_REQUIRED_WITH_PURCHASABLE_ITEM, etc.',
+    schema: {
+      $ref: getSchemaPath(ItemApiErrorResponseDto),
+    },
+  })
   // @UsePipes(new ZodValidationPipe(createItemSchema))
-  async createItem(@Body() createItemDto: CreateItemDto): Promise<number> {
-    return this.itemsApplication.createItem(createItemDto);
+  async createItem(
+    @Body() createItemDto: CreateItemDto,
+  ): Promise<{ id: number; message: string }> {
+    const itemId = await this.itemsApplication.createItem(createItemDto);
+
+    return { id: itemId, message: 'The item has been successfully created.' };
   }
 
   @Delete(':id')
+  @RequirePermission(ItemAction.DELETE, AbilitySubject.Item)
   @ApiOperation({ summary: 'Delete the given item (product or service).' })
   @ApiResponse({
     status: 200,
     description: 'The item has been successfully deleted.',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Cannot delete item. Possible error types: ITEM_HAS_ASSOCIATED_TRANSACTINS, ITEM_HAS_ASSOCIATED_INVENTORY_ADJUSTMENT, etc.',
+    schema: {
+      $ref: getSchemaPath(ItemApiErrorResponseDto),
+    },
   })
   @ApiResponse({ status: 404, description: 'The item not found.' })
   @ApiParam({
@@ -186,6 +271,7 @@ export class ItemsController extends TenantController {
   }
 
   @Patch(':id/inactivate')
+  @RequirePermission(ItemAction.EDIT, AbilitySubject.Item)
   @ApiOperation({ summary: 'Inactivate the given item (product or service).' })
   @ApiResponse({
     status: 200,
@@ -204,6 +290,7 @@ export class ItemsController extends TenantController {
   }
 
   @Patch(':id/activate')
+  @RequirePermission(ItemAction.EDIT, AbilitySubject.Item)
   @ApiOperation({ summary: 'Activate the given item (product or service).' })
   @ApiResponse({
     status: 200,
@@ -222,6 +309,7 @@ export class ItemsController extends TenantController {
   }
 
   @Get(':id')
+  @RequirePermission(ItemAction.VIEW, AbilitySubject.Item)
   @ApiOperation({ summary: 'Get the given item (product or service).' })
   @ApiResponse({
     status: 200,
@@ -243,6 +331,7 @@ export class ItemsController extends TenantController {
   }
 
   @Get(':id/invoices')
+  @RequirePermission(ItemAction.VIEW, AbilitySubject.Item)
   @ApiOperation({
     summary: 'Retrieves the item associated invoices transactions.',
   })
@@ -268,6 +357,7 @@ export class ItemsController extends TenantController {
   }
 
   @Get(':id/bills')
+  @RequirePermission(ItemAction.VIEW, AbilitySubject.Item)
   @ApiOperation({
     summary: 'Retrieves the item associated bills transactions.',
   })
@@ -293,6 +383,7 @@ export class ItemsController extends TenantController {
   }
 
   @Get(':id/estimates')
+  @RequirePermission(ItemAction.VIEW, AbilitySubject.Item)
   @ApiOperation({
     summary: 'Retrieves the item associated estimates transactions.',
   })
@@ -318,6 +409,7 @@ export class ItemsController extends TenantController {
   }
 
   @Get(':id/receipts')
+  @RequirePermission(ItemAction.VIEW, AbilitySubject.Item)
   @ApiOperation({
     summary: 'Retrieves the item associated receipts transactions.',
   })
@@ -326,7 +418,8 @@ export class ItemsController extends TenantController {
     description:
       'The item associated receipts transactions have been successfully retrieved.',
     schema: {
-      $ref: getSchemaPath(ItemReceiptsResponseDto),
+      type: 'array',
+      items: { $ref: getSchemaPath(ItemReceiptsResponseDto) },
     },
   })
   @ApiResponse({ status: 404, description: 'The item not found.' })

@@ -1,5 +1,3 @@
-// @ts-nocheck
-import React from 'react';
 import {
   Button,
   Classes,
@@ -12,30 +10,37 @@ import {
   PopoverInteractionKind,
   Position,
 } from '@blueprintjs/core';
-import * as R from 'ramda';
-import { AppToaster, Can, DashboardActionsBar, Icon } from '@/components';
-import { AbilitySubject, TaxRateAction } from '@/constants/abilityOption';
-import { withDrawerActions } from '@/containers/Drawer/withDrawerActions';
-import { withAlertActions } from '@/containers/Alert/withAlertActions';
-import { withDialogActions } from '@/containers/Dialog/withDialogActions';
+import * as FF from 'fp-ts/function';
 import { useTaxRateDetailsContext } from './TaxRateDetailsContentBoot';
+import { AppToaster, Can, DrawerActionsBar, Icon } from '@/components';
+import { AbilitySubject, TaxRateAction } from '@/constants/abilityOption';
 import { DialogsName } from '@/constants/dialogs';
+import {
+  withAlertActions,
+  WithAlertActionsProps,
+} from '@/containers/Alert/withAlertActions';
+import {
+  withDialogActions,
+  WithDialogActionsProps,
+} from '@/containers/Dialog/withDialogActions';
+import { withDrawerActions } from '@/containers/Drawer/withDrawerActions';
 import {
   useActivateTaxRate,
   useInactivateTaxRate,
-} from '@/hooks/query/taxRates';
+} from '@/hooks/query/tax-rates';
+
+interface TaxRateDetailsContentActionsBarInnerProps
+  extends Pick<WithDialogActionsProps, 'openDialog'>,
+    Pick<WithAlertActionsProps, 'openAlert'> {}
 
 /**
  * Tax rate details content actions bar.
  * @returns {JSX.Element}
  */
-function TaxRateDetailsContentActionsBar({
-  // #withDrawerActions
+function TaxRateDetailsContentActionsBarInner({
   openDialog,
-
-  // #withAlertActions
   openAlert,
-}) {
+}: TaxRateDetailsContentActionsBarInnerProps) {
   const { taxRateId, taxRate } = useTaxRateDetailsContext();
 
   const { mutateAsync: activateTaxRateMutate } = useActivateTaxRate();
@@ -83,7 +88,7 @@ function TaxRateDetailsContentActionsBar({
   };
 
   return (
-    <DashboardActionsBar>
+    <DrawerActionsBar>
       <NavbarGroup>
         <Can I={TaxRateAction.Edit} a={AbilitySubject.TaxRate}>
           <Button
@@ -115,13 +120,13 @@ function TaxRateDetailsContentActionsBar({
             }}
             content={
               <Menu>
-                {!taxRate.active && (
+                {!taxRate?.active && (
                   <MenuItem
                     text={'Activate Tax Rate'}
                     onClick={handleActivateTaxRate}
                   />
                 )}
-                {!!taxRate.active && (
+                {!!taxRate?.active && (
                   <MenuItem
                     text={'Inactivate Tax Rate'}
                     onClick={handleInactivateTaxRate}
@@ -137,12 +142,13 @@ function TaxRateDetailsContentActionsBar({
           </Popover>
         </Can>
       </NavbarGroup>
-    </DashboardActionsBar>
+    </DrawerActionsBar>
   );
 }
 
-export default R.compose(
-  withDrawerActions,
-  withDialogActions,
+export const TaxRateDetailsContentActionsBar = FF.pipe(
+  TaxRateDetailsContentActionsBarInner,
   withAlertActions,
-)(TaxRateDetailsContentActionsBar);
+  withDialogActions,
+  withDrawerActions,
+);

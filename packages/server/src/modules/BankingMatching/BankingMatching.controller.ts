@@ -1,12 +1,30 @@
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { castArray } from 'lodash';
 import { BankingMatchingApplication } from './BankingMatchingApplication';
-import { GetMatchedTransactionsFilter } from './types';
 import { MatchBankTransactionDto } from './dtos/MatchBankTransaction.dto';
+import { GetMatchedTransactionsQueryDto } from './dtos/GetMatchedTransactionsQuery.dto';
+import { GetMatchedTransactionsResponseDto } from './dtos/GetMatchedTransactionsResponse.dto';
 import { ApiCommonHeaders } from '@/common/decorators/ApiCommonHeaders';
 
 @Controller('banking/matching')
 @ApiTags('Banking Transactions Matching')
+@ApiExtraModels(GetMatchedTransactionsResponseDto)
 @ApiCommonHeaders()
 export class BankingMatchingController {
   constructor(
@@ -15,13 +33,29 @@ export class BankingMatchingController {
 
   @Get('matched')
   @ApiOperation({ summary: 'Retrieves the matched transactions.' })
+  @ApiQuery({
+    name: 'uncategorizedTransactionIds',
+    required: true,
+    type: [Number],
+    isArray: true,
+    description: 'Uncategorized transaction IDs to match',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Matched transactions (perfect and possible matches).',
+    schema: { $ref: getSchemaPath(GetMatchedTransactionsResponseDto) },
+  })
   async getMatchedTransactions(
     @Query('uncategorizedTransactionIds') uncategorizedTransactionIds: number[],
-    @Query() filter: GetMatchedTransactionsFilter,
+    @Query() filter: GetMatchedTransactionsQueryDto,
   ) {
+    const ids = castArray(uncategorizedTransactionIds ?? []).map((id) =>
+      Number(id),
+    );
+
     return this.bankingMatchingApplication.getMatchedTransactions(
-      uncategorizedTransactionIds,
-      filter,
+      ids,
+      filter as any,
     );
   }
 
@@ -34,7 +68,7 @@ export class BankingMatchingController {
     );
   }
 
-  @Post('/unmatch/:uncategorizedTransactionId')
+  @Patch('/unmatch/:uncategorizedTransactionId')
   @ApiOperation({ summary: 'Unmatch the given uncategorized transaction.' })
   async unmatchMatchedTransaction(
     @Param('uncategorizedTransactionId') uncategorizedTransactionId: number,

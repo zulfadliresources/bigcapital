@@ -1,19 +1,15 @@
 // @ts-nocheck
+import 'regenerator-runtime/runtime';
+import './wdyr';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { PersistGate } from 'redux-persist/integration/react';
-
 import '@/services/yup';
 import App from '@/components/App';
 import * as serviceWorker from '@/serviceWorker';
-import { store, persistor } from '@/store/createStore';
-
-if (process.env.NODE_ENV === 'development') {
-  const whyDidYouRender = require('@welldone-software/why-did-you-render');
-  whyDidYouRender(React, { trackAllPureComponents: false });
-}
+import { store, persistor } from '@/store/create-store';
 
 ReactDOM.render(
   <Provider store={store}>

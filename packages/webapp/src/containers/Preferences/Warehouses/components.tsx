@@ -1,30 +1,32 @@
-// @ts-nocheck
+import {
+  Classes,
+  Intent,
+  Menu,
+  MenuDivider,
+  MenuItem,
+} from '@blueprintjs/core';
 import React from 'react';
 import intl from 'react-intl-universal';
 import styled from 'styled-components';
-import {
-  Menu,
-  MenuItem,
-  MenuDivider,
-  Intent,
-  Classes,
-} from '@blueprintjs/core';
-
+import type { Warehouse } from '@bigcapital/sdk-ts';
 import { Icon, If } from '@/components';
 import { safeCallback } from '@/utils';
 
 const WAREHOUSES_SKELETON_N = 4;
 
-/**
- * Warehouse grid item box context menu.
- * @returns {JSX.Element}
- */
+interface WarehouseContextMenuProps {
+  warehouse: Warehouse;
+  onEditClick: () => void;
+  onDeleteClick: () => void;
+  onMarkPrimary: () => void;
+}
+
 export function WarehouseContextMenu({
   onEditClick,
   onDeleteClick,
   onMarkPrimary,
   warehouse,
-}) {
+}: WarehouseContextMenuProps): React.ReactElement {
   return (
     <Menu>
       <MenuItem
@@ -50,11 +52,7 @@ export function WarehouseContextMenu({
   );
 }
 
-/**
- * Warehouse grid item box skeleton.
- * @returns {JSX.Element}
- */
-function WarehouseGridItemSkeletonBox() {
+function WarehouseGridItemSkeletonBox(): React.ReactElement {
   return (
     <WarehouseBoxRoot>
       <WarehouseHeader>
@@ -70,10 +68,16 @@ function WarehouseGridItemSkeletonBox() {
   );
 }
 
-/**
- * Warehouse grid item box.
- * @returns {JSX.Element}
- */
+interface WarehousesGridItemBoxProps {
+  title: string;
+  code: string;
+  city?: string;
+  country?: string;
+  email?: string;
+  phoneNumber?: string;
+  primary?: boolean;
+}
+
 export function WarehousesGridItemBox({
   title,
   code,
@@ -82,12 +86,12 @@ export function WarehousesGridItemBox({
   email,
   phoneNumber,
   primary,
-}) {
+}: WarehousesGridItemBoxProps): React.ReactElement {
   return (
-    <WarehouseBoxRoot>
+    <WarehouseBoxRoot data-testId="warehouse-item">
       <WarehouseHeader>
         <WarehouseTitle>
-          {title} {primary && <Icon icon={'star-18dp'} iconSize={16} />}
+          {title} {primary ? <Icon icon={'star-18dp'} iconSize={16} /> : null}
         </WarehouseTitle>
         <WarehouseCode>{code}</WarehouseCode>
         <WarehouseIcon>
@@ -104,10 +108,14 @@ export function WarehousesGridItemBox({
   );
 }
 
-export function WarehousesSkeleton() {
-  return [...Array(WAREHOUSES_SKELETON_N)].map((key, value) => (
-    <WarehouseGridItemSkeletonBox />
-  ));
+export function WarehousesSkeleton(): React.ReactElement {
+  return (
+    <>
+      {[...Array(WAREHOUSES_SKELETON_N)].map((_key, value) => (
+        <WarehouseGridItemSkeletonBox key={value} />
+      ))}
+    </>
+  );
 }
 
 export const WarehousesList = styled.div`
@@ -118,12 +126,21 @@ export const WarehousesList = styled.div`
 `;
 
 export const WarehouseBoxRoot = styled.div`
+  --x-box-border-color: #c8cad0;
+  --x-box-background-color: #fff;
+  --x-box-hover-border-color: #0153cc;
+
+  .bp4-dark & {
+    --x-box-border-color: rgba(255, 255, 255, 0.2);
+    --x-box-background-color: var(--color-dark-gray3);
+    --x-box-hover-border-color: #0153cc;
+  }
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   border-radius: 5px;
-  border: 1px solid #c8cad0;
-  background: #fff;
+  border: 1px solid var(--x-box-border-color);
+  background: var(--x-box-background-color);
   margin: 5px 5px 8px;
   width: 200px;
   height: 160px;
@@ -132,7 +149,7 @@ export const WarehouseBoxRoot = styled.div`
   position: relative;
 
   &:hover {
-    border-color: #0153cc;
+    border-color: var(--x-box-hover-border-color);
   }
 `;
 
@@ -143,9 +160,16 @@ export const WarehouseHeader = styled.div`
 `;
 
 export const WarehouseTitle = styled.div`
+  --x-title-color: #000;
+  --x-title-icon-color: #e1b31d;
+
+  .bp4-dark & {
+    --x-title-color: var(--color-light-gray5);
+    --x-title-icon-color: #e1b31d;
+  }
   font-size: 14px;
   font-style: inherit;
-  color: #000;
+  color: var(--x-title-color);
   white-space: nowrap;
   font-weight: 500;
   line-height: 1;
@@ -154,14 +178,19 @@ export const WarehouseTitle = styled.div`
     margin: 0;
     margin-left: 2px;
     vertical-align: top;
-    color: #e1b31d;
+    color: var(--x-title-icon-color);
   }
 `;
 
 const WarehouseCode = styled.div`
+  --x-code-color: #6b7176;
+
+  .bp4-dark & {
+    --x-code-color: var(--color-muted-text);
+  }
   display: block;
   font-size: 11px;
-  color: #6b7176;
+  color: var(--x-code-color);
   margin-top: 4px;
 `;
 
@@ -178,8 +207,13 @@ const WarehouseContent = styled.div`
 `;
 
 const WarehouseItem = styled.div`
+  --x-item-color: #000;
+
+  .bp4-dark & {
+    --x-item-color: var(--color-light-gray1);
+  }
   font-size: 11px;
-  color: #000;
+  color: var(--x-item-color);
   text-overflow: ellipsis;
   overflow: hidden;
 

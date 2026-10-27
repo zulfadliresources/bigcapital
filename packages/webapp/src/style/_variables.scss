@@ -7,6 +7,27 @@ $ns: bp4;
   --color-primary: #8abbff;
   --color-danger: red;
 
+  // Green colors
+  --color-green-500: #165a36;
+  --color-green-400: #1c6e42;
+  --color-green-300: #238551;
+  --color-green-200: #32a467;
+  --color-green-100: #72ca9b;
+
+  // Red colors
+  --color-red-500: #8e292c;
+  --color-red-400: #ac2f33;
+  --color-red-300: #cd4246;
+  --color-red-200: #e76a6e;
+  --color-red-100: #fa999c;
+
+  // Orange colors
+  --color-orange-500: #77450d;
+  --color-orange-400: #935610;
+  --color-orange-300: #c87619;
+  --color-orange-200: #ec9a3c;
+  --color-orange-100: #fbb360;
+
   --color-dark-gray5: #404854;
   --color-dark-gray4: #383e47;
   --color-dark-gray3: #2f343c;
@@ -18,6 +39,12 @@ $ns: bp4;
   --color-light-gray3: #e5e8eb;
   --color-light-gray4: #edeff2;
   --color-light-gray5: #f6f7f9;
+
+  --color-gray1: #5F6B7C;
+  --color-gray2: #738091;
+  --color-gray3: #8F99A8;
+  --color-gray4: #ABB3BF;
+  --color-gray5: #C5CBD3;
 
   --color-white: #fff;
   --color-black: #000;
@@ -119,7 +146,6 @@ $ns: bp4;
   --color-sidebar-text: #fff;
   --color-sidebar-scrollbars-background: rgba(255, 255, 255, 0.25);
   
-
   // Sidebar - Items  
   --color-sidebar-menu-item-text: rgb(255, 255, 255);
   --color-sidebar-menu-item-hover-background: rgba(255, 255, 255, 0.2);
@@ -162,7 +188,6 @@ $ns: bp4;
   --color-bank-account-card-hover-border: #0153cc;
 
   --color-bank-account-card-tag-background: rgb(223, 225, 230);
-
   --color-bank-account-code-text: rgb(23, 43, 77);
 
   // Bank transactions - details bar.
@@ -196,7 +221,6 @@ $ns: bp4;
   --color-preferences-sidebar-head-border: #bbcbd0;
   --color-preferences-sidebar-head-text: #3b3b4c;
 
-
   // Preferences - Topbar.
   --color-preferences-topbar-background: #fff;
   --color-preferences-topbar-border: #d2dde2;
@@ -209,7 +233,7 @@ $ns: bp4;
   --color-financial-sheet-title-text: rgb(31, 50, 85);
   --color-financial-sheet-type-text: rgb(31, 50, 85);
   --color-financial-sheet-date-text: rgb(31, 50, 85);
-  --color-financial-sheet-footer-text: rgb(31, 50, 85);
+  --color-financial-sheet-footer-text: var(--color-muted-text);
   --color-financial-sheet-minimal-title-text: #333;
 
   // Transaction locking.
@@ -301,6 +325,27 @@ $pt-popover-box-shadow:
 body.bp4-dark  {
   --color-primary: #8abbff;
   --color-danger: rgb(213, 103, 103);
+
+  // Green colors (dark mode - lighter variants)
+  --color-green-500: #72ca9b;
+  --color-green-400: #32a467;
+  --color-green-300: #238551;
+  --color-green-200: #1c6e42;
+  --color-green-100: #165a36;
+
+  // Red colors (dark mode - lighter variants)
+  --color-red-500: #fa999c;
+  --color-red-400: #e76a6e;
+  --color-red-300: #cd4246;
+  --color-red-200: #ac2f33;
+  --color-red-100: #8e292c;
+
+  // Orange colors (dark mode - lighter variants)
+  --color-orange-500: #fbb360;
+  --color-orange-400: #ec9a3c;
+  --color-orange-300: #c87619;
+  --color-orange-200: #935610;
+  --color-orange-100: #77450d;
 
   --color-dark-gray5: #404854;
   --color-dark-gray4: #383e47;
@@ -514,7 +559,7 @@ body.bp4-dark  {
   --color-financial-sheet-title-text: var(--color-light-gray1);
   --color-financial-sheet-type-text: var(--color-light-gray1);
   --color-financial-sheet-date-text: var(--color-light-gray1);
-  --color-financial-sheet-footer-text: var(--color-light-gray1);
+  --color-financial-sheet-footer-text: var(--color-muted-text);
   --color-financial-sheet-minimal-title-text: var(--color-white);
 
   // Transaction locking.

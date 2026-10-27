@@ -3,14 +3,16 @@ import { TransactionsByReferenceApplication } from './TransactionsByReferenceApp
 import { TransactionsByReferenceRepository } from './TransactionsByReferenceRepository';
 import { TransactionsByReferenceService } from './TransactionsByReference.service';
 import { TransactionsByReferenceController } from './TransactionsByReference.controller';
-import { TenancyContext } from '@/modules/Tenancy/TenancyContext.service';
+import { TenancyModule } from '@/modules/Tenancy/Tenancy.module';
+import { FinancialSheetCommonModule } from '../../common/FinancialSheetCommon.module';
+import { AccountsModule } from '@/modules/Accounts/Accounts.module';
 
 @Module({
+  imports: [TenancyModule, FinancialSheetCommonModule, AccountsModule],
   providers: [
     TransactionsByReferenceRepository,
     TransactionsByReferenceApplication,
     TransactionsByReferenceService,
-    TenancyContext
   ],
   controllers: [TransactionsByReferenceController],
 })

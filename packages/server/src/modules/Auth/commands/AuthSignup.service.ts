@@ -13,7 +13,6 @@ import {
   IAuthSignedUpEventPayload,
   IAuthSigningUpEventPayload,
 } from '../Auth.interfaces';
-import { defaultTo } from 'ramda';
 import { ERRORS } from '../Auth.constants';
 import { hashPassword } from '../Auth.utils';
 import { ClsService } from 'nestjs-cls';
@@ -34,7 +33,7 @@ export class AuthSignupService {
 
     @Inject(SystemUser.name)
     private readonly systemUserModel: typeof SystemUser,
-  ) { }
+  ) {}
 
   /**
    * Registers a new tenant with user from user input.
@@ -51,7 +50,7 @@ export class AuthSignupService {
     const signupConfirmation = this.configService.get('signupConfirmation');
 
     const verifyTokenCrypto = crypto.randomBytes(64).toString('hex');
-    const verifiedEnabed = defaultTo(signupConfirmation.enabled, false);
+    const verifiedEnabed = signupConfirmation.enabled ?? false;
     const verifyToken = verifiedEnabed ? verifyTokenCrypto : '';
     const verified = !verifiedEnabed;
 
@@ -73,7 +72,6 @@ export class AuthSignupService {
       inviteAcceptedAt,
     });
     // Set the user in the cls service.
-    this.clsService.set('tenantId', user.tenantId);
     this.clsService.set('userId', user.id);
     this.clsService.set('organizationId', tenant.organizationId);
 

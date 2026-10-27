@@ -1,9 +1,9 @@
 import { Classes, Text } from '@blueprintjs/core';
-import { Box, Group, Stack } from '@/components';
 import {
   PaperTemplate,
   PaperTemplateProps,
 } from '../../Invoices/InvoiceCustomize/PaperTemplate';
+import { Box, Group, Stack } from '@/components';
 import {
   DefaultPdfTemplateTerms,
   DefaultPdfTemplateItemDescription,
@@ -72,11 +72,10 @@ export interface EstimatePaperTemplateProps extends PaperTemplateProps {
   }>;
 
   // Lines
-  lineItemLabel?: string,
-  lineQuantityLabel?: string,
-  lineRateLabel?: string,
-  lineTotalLabel?: string,
-
+  lineItemLabel?: string;
+  lineQuantityLabel?: string;
+  lineRateLabel?: string;
+  lineTotalLabel?: string;
 }
 
 export function EstimatePaperTemplate({
@@ -148,7 +147,6 @@ export function EstimatePaperTemplate({
   lineQuantityLabel = 'Qty',
   lineRateLabel = 'Rate',
   lineTotalLabel = 'Total',
-
 }: EstimatePaperTemplateProps) {
   return (
     <PaperTemplate primaryColor={primaryColor} secondaryColor={secondaryColor}>

@@ -1,5 +1,7 @@
 import { Model } from 'objection';
 import { PaymentReceivedEntry } from './PaymentReceivedEntry';
+import { Customer } from '@/modules/Customers/models/Customer';
+import { Document } from '@/modules/ChromiumlyTenancy/models/Document';
 import { TenantBaseModel } from '@/modules/System/models/TenantBaseModel';
 import { ExportableModel } from '@/modules/Export/decorators/ExportableModel.decorator';
 import { ImportableModel } from '@/modules/Import/decorators/Import.decorator';
@@ -7,7 +9,9 @@ import { InjectModelMeta } from '@/modules/Tenancy/TenancyModels/decorators/Inje
 import { PaymentReceivedMeta } from './PaymentReceived.meta';
 import { InjectModelDefaultViews } from '@/modules/Views/decorators/InjectModelDefaultViews.decorator';
 import { PaymentReceivedDefaultViews } from '../constants';
+import { InjectAttachable } from '@/modules/Attachments/decorators/InjectAttachable.decorator';
 
+@InjectAttachable()
 @ExportableModel()
 @ImportableModel()
 @InjectModelMeta(PaymentReceivedMeta)
@@ -31,6 +35,8 @@ export class PaymentReceived extends TenantBaseModel {
   updatedAt: string;
 
   entries?: PaymentReceivedEntry[];
+  customer?: Customer;
+  public attachments!: Document[];
 
   /**
    * Table name.
@@ -43,7 +49,7 @@ export class PaymentReceived extends TenantBaseModel {
    * Timestamps columns.
    */
   get timestamps() {
-    return ['created_at', 'updated_at'];
+    return ['createdAt', 'updatedAt'];
   }
 
   /**
@@ -159,7 +165,7 @@ export class PaymentReceived extends TenantBaseModel {
           to: 'documents.id',
         },
         filter(query) {
-          query.where('model_ref', 'PaymentReceive');
+          query.where('model_ref', 'PaymentReceived');
         },
       },
 

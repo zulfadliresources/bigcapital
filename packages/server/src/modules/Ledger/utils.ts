@@ -1,9 +1,9 @@
 import * as moment from 'moment';
-import { AccountTransaction } from "../Accounts/models/AccountTransaction.model";
-import { ILedgerEntry } from "./types/Ledger.types";
+import { AccountTransaction } from '../Accounts/models/AccountTransaction.model';
+import { ILedgerEntry } from './types/Ledger.types';
 
 export const transformLedgerEntryToTransaction = (
-  entry: ILedgerEntry
+  entry: ILedgerEntry,
 ): Partial<AccountTransaction> => {
   return {
     date: moment(entry.date).toDate(),
@@ -35,9 +35,11 @@ export const transformLedgerEntryToTransaction = (
     itemId: entry.itemId,
     projectId: entry.projectId,
 
-    // costable: entry.costable,
+    costable: entry.costable,
 
     taxRateId: entry.taxRateId,
     taxRate: entry.taxRate,
+
+    basis: entry.basis ?? null,
   };
 };

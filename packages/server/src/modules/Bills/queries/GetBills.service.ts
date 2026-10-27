@@ -5,7 +5,7 @@ import { DynamicListService } from '@/modules/DynamicListing/DynamicList.service
 import { Bill } from '../models/Bill';
 import { IFilterMeta, IPaginationMeta } from '@/interfaces/Model';
 import { BillTransformer } from './Bill.transformer';
-import { IBillsFilter } from '../Bills.types';
+import { GetBillsQueryDto } from '../dtos/GetBillsQuery.dto';
 import { TenantModelProxy } from '@/modules/System/models/TenantBaseModel';
 
 @Injectable()
@@ -19,10 +19,10 @@ export class GetBillsService {
 
   /**
    * Retrieve bills data table list.
-   * @param {IBillsFilter} billsFilter -
+   * @param {GetBillsQueryDto} filterDTO -
    */
-  public async getBills(filterDTO: Partial<IBillsFilter>): Promise<{
-    bills: Bill;
+  public async getBills(filterDTO: GetBillsQueryDto): Promise<{
+    data: Bill[];
     pagination: IPaginationMeta;
     filterMeta: IFilterMeta;
   }> {
@@ -49,17 +49,19 @@ export class GetBillsService {
         dynamicFilter.buildQuery()(builder);
 
         // Filter query.
-        _filterDto?.filterQuery && _filterDto?.filterQuery(builder);
+        if (_filterDto?.filterQuery) {
+          _filterDto?.filterQuery(builder);
+        }
       })
       .pagination(filter.page - 1, filter.pageSize);
 
     // Tranform the bills to POJO.
-    const bills = await this.transformer.transform(
+    const data = await this.transformer.transform(
       results,
       new BillTransformer(),
     );
     return {
-      bills,
+      data,
       pagination,
       filterMeta: dynamicFilter.getResponseMeta(),
     };

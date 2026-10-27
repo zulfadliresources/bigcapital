@@ -1,10 +1,10 @@
-import { Model, mixin } from 'objection';
+import { Model } from 'objection';
 // import TenantModel from 'models/TenantModel';
 // import ModelSetting from './ModelSetting';
 // import ModelSearchable from './ModelSearchable';
 import { BaseModel } from '@/models/Model';
 
-export class DocumentLink extends BaseModel{
+export class DocumentLink extends BaseModel {
   public modelRef: string;
   public modelId: number;
   public documentId: number;
@@ -28,7 +28,7 @@ export class DocumentLink extends BaseModel{
    * Relationship mapping.
    */
   static get relationMappings() {
-    const Document = require('./Document');
+    const { Document } = require('./Document');
 
     return {
       /**
@@ -36,7 +36,7 @@ export class DocumentLink extends BaseModel{
        */
       document: {
         relation: Model.HasOneRelation,
-        modelClass: Document.default,
+        modelClass: Document,
         join: {
           from: 'document_links.documentId',
           to: 'documents.id',

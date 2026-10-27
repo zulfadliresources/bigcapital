@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bull';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { BullModule } from '@nestjs/bullmq';
 import { SaleReceiptApplication } from './SaleReceiptApplication.service';
 import { CreateSaleReceipt } from './commands/CreateSaleReceipt.service';
 import { EditSaleReceipt } from './commands/EditSaleReceipt.service';
@@ -13,7 +15,7 @@ import { SaleReceiptDTOTransformer } from './commands/SaleReceiptDTOTransformer.
 import { SaleReceiptValidators } from './commands/SaleReceiptValidators.service';
 import { ChromiumlyTenancyModule } from '../ChromiumlyTenancy/ChromiumlyTenancy.module';
 import { TemplateInjectableModule } from '../TemplateInjectable/TemplateInjectable.module';
-import { TenancyContext } from '../Tenancy/TenancyContext.service';
+import { TenancyModule } from '../Tenancy/Tenancy.module';
 import { SaleReceiptBrandingTemplate } from './queries/SaleReceiptBrandingTemplate.service';
 import { BranchesModule } from '../Branches/Branches.module';
 import { WarehousesModule } from '../Warehouses/Warehouses.module';
@@ -34,16 +36,26 @@ import { DynamicListModule } from '../DynamicListing/DynamicList.module';
 import { MailNotificationModule } from '../MailNotification/MailNotification.module';
 import { SendSaleReceiptMailProcess } from './processes/SendSaleReceiptMail.process';
 import { MailModule } from '../Mail/Mail.module';
+import { SMSModule } from '../SMS/SMS.module';
+import { FeaturesModule } from '../Features/Features.module';
+import { SaleReceiptSmsNotification } from './SaleReceiptSmsNotification';
 import { SendSaleReceiptMailQueue } from './constants';
+import { SMS_QUEUE } from '../SMS/SMS.constants';
 import { SaleReceiptsExportable } from './commands/SaleReceiptsExportable';
 import { SaleReceiptsImportable } from './commands/SaleReceiptsImportable';
 import { GetSaleReceiptMailStateService } from './queries/GetSaleReceiptMailState.service';
 import { GetSaleReceiptMailTemplateService } from './queries/GetSaleReceiptMailTemplate.service';
 import { SaleReceiptAutoIncrementSubscriber } from './subscribers/SaleReceiptAutoIncrementSubscriber';
+import { SaleReceiptSmsNotificationSubscriber } from './subscribers/SaleReceiptSmsNotificationSubscriber';
+import { SaleReceiptCostGLEntriesSubscriber } from './subscribers/SaleReceiptCostGLEntriesSubscriber';
+import { SaleReceiptCostGLEntries } from './SaleReceiptCostGLEntries';
+import { BulkDeleteSaleReceiptsService } from './BulkDeleteSaleReceipts.service';
+import { ValidateBulkDeleteSaleReceiptsService } from './ValidateBulkDeleteSaleReceipts.service';
 
 @Module({
   controllers: [SaleReceiptsController],
   imports: [
+    TenancyModule,
     ItemsModule,
     ChromiumlyTenancyModule,
     TemplateInjectableModule,
@@ -56,13 +68,20 @@ import { SaleReceiptAutoIncrementSubscriber } from './subscribers/SaleReceiptAut
     InventoryCostModule,
     DynamicListModule,
     MailModule,
+    SMSModule,
+    FeaturesModule,
     MailNotificationModule,
+    BullModule.registerQueue({ name: SMS_QUEUE }),
     BullModule.registerQueue({ name: SendSaleReceiptMailQueue }),
+    BullBoardModule.forFeature({
+      name: SendSaleReceiptMailQueue,
+      adapter: BullMQAdapter,
+    }),
   ],
   providers: [
-    TenancyContext,
     SaleReceiptValidators,
     SaleReceiptApplication,
+    SaleReceiptSmsNotification,
     CreateSaleReceipt,
     EditSaleReceipt,
     GetSaleReceipt,
@@ -85,6 +104,11 @@ import { SaleReceiptAutoIncrementSubscriber } from './subscribers/SaleReceiptAut
     GetSaleReceiptMailStateService,
     GetSaleReceiptMailTemplateService,
     SaleReceiptAutoIncrementSubscriber,
+    SaleReceiptSmsNotificationSubscriber,
+    SaleReceiptCostGLEntries,
+    SaleReceiptCostGLEntriesSubscriber,
+    BulkDeleteSaleReceiptsService,
+    ValidateBulkDeleteSaleReceiptsService,
   ],
 })
-export class SaleReceiptsModule { }
+export class SaleReceiptsModule {}

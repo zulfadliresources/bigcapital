@@ -4,11 +4,16 @@ import { DeleteCreditNoteService } from './commands/DeleteCreditNote.service';
 import { EditCreditNoteService } from './commands/EditCreditNote.service';
 import { OpenCreditNoteService } from './commands/OpenCreditNote.service';
 import { GetCreditNotePdf } from './queries/GetCreditNotePdf.serivce';
-import { ICreditNotesQueryDTO } from './types/CreditNotes.types';
 import { GetCreditNotesService } from './queries/GetCreditNotes.service';
 import { CreateCreditNoteDto, EditCreditNoteDto } from './dtos/CreditNote.dto';
+import { GetCreditNotesQueryDto } from './dtos/GetCreditNotesQuery.dto';
 import { GetCreditNoteState } from './queries/GetCreditNoteState.service';
 import { GetCreditNoteService } from './queries/GetCreditNote.service';
+import { BulkDeleteCreditNotesService } from './BulkDeleteCreditNotes.service';
+import { ValidateBulkDeleteCreditNotesService } from './ValidateBulkDeleteCreditNotes.service';
+import { SendCreditNoteMail } from './commands/SendCreditNoteMail';
+import { GetCreditNoteMailStateService } from './queries/GetCreditNoteMailState.service';
+import { CreditNoteMailOptionsDTO } from './types/CreditNotes.types';
 
 @Injectable()
 export class CreditNoteApplication {
@@ -20,7 +25,11 @@ export class CreditNoteApplication {
     private readonly getCreditNotePdfService: GetCreditNotePdf,
     private readonly getCreditNotesService: GetCreditNotesService,
     private readonly getCreditNoteStateService: GetCreditNoteState,
-    private readonly getCreditNoteService: GetCreditNoteService
+    private readonly getCreditNoteService: GetCreditNoteService,
+    private readonly bulkDeleteCreditNotesService: BulkDeleteCreditNotesService,
+    private readonly validateBulkDeleteCreditNotesService: ValidateBulkDeleteCreditNotesService,
+    private readonly sendCreditNoteMailService: SendCreditNoteMail,
+    private readonly getCreditNoteMailStateService: GetCreditNoteMailStateService,
   ) {}
 
   /**
@@ -73,11 +82,20 @@ export class CreditNoteApplication {
   }
 
   /**
+   * Retrieve the HTML content of the given credit note.
+   * @param {number} creditNoteId
+   * @returns {Promise<string>}
+   */
+  getCreditNoteHtml(creditNoteId: number) {
+    return this.getCreditNotePdfService.getCreditNoteHtml(creditNoteId);
+  }
+
+  /**
    * Retrieves the credit notes list.
-   * @param {ICreditNotesQueryDTO} creditNotesQuery
+   * @param {GetCreditNotesQueryDto} creditNotesQuery
    * @returns {Promise<GetCreditNotesResponse>}
    */
-  getCreditNotes(creditNotesQuery: ICreditNotesQueryDTO) {
+  getCreditNotes(creditNotesQuery: GetCreditNotesQueryDto) {
     return this.getCreditNotesService.getCreditNotesList(creditNotesQuery);
   }
 
@@ -96,5 +114,58 @@ export class CreditNoteApplication {
    */
   getCreditNote(creditNoteId: number) {
     return this.getCreditNoteService.getCreditNote(creditNoteId);
+  }
+
+  /**
+   * Deletes multiple credit notes.
+   * @param {number[]} creditNoteIds
+   * @returns {Promise<void>}
+   */
+  bulkDeleteCreditNotes(
+    creditNoteIds: number[],
+    options?: { skipUndeletable?: boolean },
+  ) {
+    return this.bulkDeleteCreditNotesService.bulkDeleteCreditNotes(
+      creditNoteIds,
+      options,
+    );
+  }
+
+  /**
+   * Validates which credit notes can be deleted.
+   * @param {number[]} creditNoteIds
+   * @returns {Promise<{deletableCount: number, nonDeletableCount: number, deletableIds: number[], nonDeletableIds: number[]}>}
+   */
+  validateBulkDeleteCreditNotes(creditNoteIds: number[]) {
+    return this.validateBulkDeleteCreditNotesService.validateBulkDeleteCreditNotes(
+      creditNoteIds,
+    );
+  }
+
+  /**
+   * Triggers the mail of the given credit note.
+   * @param {number} creditNoteId
+   * @param {CreditNoteMailOptionsDTO} mailOptions
+   * @returns {Promise<void>}
+   */
+  sendCreditNoteMail(
+    creditNoteId: number,
+    mailOptions: CreditNoteMailOptionsDTO,
+  ) {
+    return this.sendCreditNoteMailService.triggerMail(
+      creditNoteId,
+      mailOptions,
+    );
+  }
+
+  /**
+   * Retrieves the credit note mail state.
+   * @param {number} creditNoteId
+   * @returns {Promise<CreditNoteMailState>}
+   */
+  getCreditNoteMailState(creditNoteId: number) {
+    return this.getCreditNoteMailStateService.getCreditNoteMailState(
+      creditNoteId,
+    );
   }
 }

@@ -1,32 +1,74 @@
 import {
+  ApiExtraModels,
   ApiOperation,
   ApiProduces,
+  ApiQuery,
   ApiResponse,
   ApiTags,
+  getSchemaPath,
 } from '@nestjs/swagger';
 import { Response } from 'express';
-import { Controller, Get, Headers, Query, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Headers,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { GeneralLedgerApplication } from './GeneralLedgerApplication';
 import { AcceptType } from '@/constants/accept-type';
+import { NumberFormatQueryDto } from '@/modules/BankingTransactions/dtos/NumberFormatQuery.dto';
 import { GeneralLedgerQueryDto } from './GeneralLedgerQuery.dto';
 import { GeneralLedgerResponseExample } from './GeneralLedger.swagger';
+import {
+  GeneralLedgerResponseDto,
+  GeneralLedgerTableResponseDto,
+} from './GeneralLedgerResponse.dto';
 import { ApiCommonHeaders } from '@/common/decorators/ApiCommonHeaders';
+import { RequirePermission } from '@/modules/Roles/RequirePermission.decorator';
+import { PermissionGuard } from '@/modules/Roles/Permission.guard';
+import { AuthorizationGuard } from '@/modules/Roles/Authorization.guard';
+import { AbilitySubject } from '@/modules/Roles/Roles.types';
+import { ReportsAction } from '../../types/Report.types';
 
 @Controller('/reports/general-ledger')
 @ApiTags('Reports')
 @ApiCommonHeaders()
+@UseGuards(AuthorizationGuard, PermissionGuard)
+@ApiExtraModels(
+  GeneralLedgerResponseDto,
+  GeneralLedgerTableResponseDto,
+  NumberFormatQueryDto,
+)
 export class GeneralLedgerController {
   constructor(
     private readonly generalLedgerApplication: GeneralLedgerApplication,
   ) {}
 
   @Get()
+  @RequirePermission(ReportsAction.READ_GENERAL_LEDGET, AbilitySubject.Report)
   @ApiResponse({
     status: 200,
     description: 'General ledger report',
-    example: GeneralLedgerResponseExample,
+    content: {
+      [AcceptType.ApplicationJson]: {
+        schema: { $ref: getSchemaPath(GeneralLedgerResponseDto) },
+        example: GeneralLedgerResponseExample,
+      },
+      [AcceptType.ApplicationJsonTable]: {
+        schema: { $ref: getSchemaPath(GeneralLedgerTableResponseDto) },
+      },
+    },
   })
   @ApiOperation({ summary: 'Get general ledger report' })
+  @ApiQuery({
+    name: 'numberFormat',
+    required: false,
+    description:
+      'Number formatting options (serialized as bracket notation, e.g. numberFormat[precision]=2)',
+    schema: { $ref: getSchemaPath(NumberFormatQueryDto) },
+  })
   @ApiProduces(
     AcceptType.ApplicationJson,
     AcceptType.ApplicationJsonTable,
@@ -39,11 +81,12 @@ export class GeneralLedgerController {
     @Res({ passthrough: true }) res: Response,
     @Headers('accept') acceptHeader: string,
   ) {
+    const accept = acceptHeader || '';
     // Retrieves the table format.
-    if (acceptHeader.includes(AcceptType.ApplicationJsonTable)) {
+    if (accept.includes(AcceptType.ApplicationJsonTable)) {
       return this.generalLedgerApplication.table(query);
       // Retrieves the csv format.
-    } else if (acceptHeader.includes(AcceptType.ApplicationCsv)) {
+    } else if (accept.includes(AcceptType.ApplicationCsv)) {
       const buffer = await this.generalLedgerApplication.csv(query);
 
       res.setHeader('Content-Disposition', 'attachment; filename=output.csv');
@@ -51,7 +94,7 @@ export class GeneralLedgerController {
 
       res.send(buffer);
       // Retrieves the xlsx format.
-    } else if (acceptHeader.includes(AcceptType.ApplicationXlsx)) {
+    } else if (accept.includes(AcceptType.ApplicationXlsx)) {
       const buffer = await this.generalLedgerApplication.xlsx(query);
 
       res.setHeader('Content-Disposition', 'attachment; filename=output.xlsx');
@@ -61,7 +104,7 @@ export class GeneralLedgerController {
       );
       res.send(buffer);
       // Retrieves the pdf format.
-    } else if (acceptHeader.includes(AcceptType.ApplicationPdf)) {
+    } else if (accept.includes(AcceptType.ApplicationPdf)) {
       const pdfContent = await this.generalLedgerApplication.pdf(query);
       res.set({
         'Content-Type': 'application/pdf',

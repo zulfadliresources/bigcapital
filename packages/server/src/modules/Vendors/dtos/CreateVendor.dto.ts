@@ -2,11 +2,13 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsISO8601,
   IsInt,
+  IsNotEmpty,
   IsNumber,
   Min,
   IsBoolean,
   IsEmail,
   IsString,
+  ValidateIf,
 } from 'class-validator';
 import { ContactAddressDto } from '@/modules/Customers/dtos/ContactAddress.dto';
 import { IsOptional, ToNumber } from '@/common/decorators/Validators';
@@ -30,8 +32,15 @@ export class CreateVendorDto extends ContactAddressDto {
   @ToNumber()
   openingBalanceExchangeRate?: number;
 
-  @ApiProperty({ required: false, description: 'Date of the opening balance' })
-  @IsOptional()
+  @ApiProperty({
+    required: false,
+    description:
+      'Date of the opening balance (required when openingBalance is provided)',
+  })
+  @ValidateIf((o) => o.openingBalance != null)
+  @IsNotEmpty({
+    message: 'openingBalanceAt is required when openingBalance is provided',
+  })
   @IsISO8601()
   openingBalanceAt?: Date;
 
@@ -109,4 +118,13 @@ export class CreateVendorDto extends ContactAddressDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @ApiProperty({
+    required: false,
+    description: 'Vendor code',
+    example: 'VEND-001',
+  })
+  @IsOptional()
+  @IsString()
+  code?: string;
 }

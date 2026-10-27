@@ -1,16 +1,16 @@
+import { Inject, Injectable } from '@nestjs/common';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { TenantModelProxy } from '../System/models/TenantBaseModel';
 import { DocumentModel } from './models/Document.model';
-import { ConfigService } from '@nestjs/config';
 import { S3_CLIENT } from '../S3/S3.module';
 
 @Injectable()
-export class getAttachmentPresignedUrl {
+export class GetAttachmentPresignedUrl {
   constructor(
     private readonly configService: ConfigService,
-    
+
     @Inject(DocumentModel.name)
     private readonly documentModel: TenantModelProxy<typeof DocumentModel>,
 
@@ -20,11 +20,14 @@ export class getAttachmentPresignedUrl {
 
   /**
    * Retrieves the presigned url of the given attachment key with the original filename.
-   * @param {string} key - 
+   * @param {string} key -
    * @returns {string}
    */
   async getPresignedUrl(key: string) {
-    const foundDocument = await this.documentModel().query().findOne({ key });
+    const foundDocument = await this.documentModel()
+      .query()
+      .findOne({ key })
+      .throwIfNotFound();
     const config = this.configService.get('s3');
 
     let ResponseContentDisposition = 'attachment';
@@ -36,7 +39,9 @@ export class getAttachmentPresignedUrl {
       Key: key,
       ResponseContentDisposition,
     });
-    const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn: 300 });
+    const signedUrl = await getSignedUrl(this.s3Client, command, {
+      expiresIn: 300,
+    });
 
     return signedUrl;
   }

@@ -62,7 +62,6 @@ export class TaxRatesApplication {
 
   /**
    * Retrieves the tax rates list.
-   * @returns {Promise<ITaxRate[]>}
    */
   public getTaxRates() {
     return this.getTaxRatesService.getTaxRates();

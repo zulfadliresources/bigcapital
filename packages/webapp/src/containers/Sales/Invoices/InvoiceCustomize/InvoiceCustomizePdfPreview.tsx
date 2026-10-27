@@ -1,12 +1,12 @@
-import * as R from 'ramda';
 import { useFormikContext } from 'formik';
+import * as FF from 'fp-ts/function';
 import {
   InvoicePaperTemplate,
   InvoicePaperTemplateProps,
 } from './InvoicePaperTemplate';
-import { useElementCustomizeContext } from '@/containers/ElementCustomize/ElementCustomizeProvider';
 import { InvoiceCustomizeFormValues } from './types';
 import { Box } from '@/components';
+import { useElementCustomizeContext } from '@/containers/ElementCustomize/ElementCustomizeProvider';
 
 /**
  * Injects the `InvoicePaperTemplate` component props from the form and branding states.
@@ -32,6 +32,7 @@ const withInvoicePreviewTemplateProps = <P extends object>(
   };
 };
 
-export const InvoiceCustomizePdfPreview = R.compose(
+export const InvoiceCustomizePdfPreview = FF.pipe(
+  InvoicePaperTemplate,
   withInvoicePreviewTemplateProps,
-)(InvoicePaperTemplate);
+);

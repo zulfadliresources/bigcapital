@@ -1,4 +1,7 @@
-import { BrandingState, BrandingTemplateValues } from '@/containers/BrandingTemplates/types';
+import {
+  BrandingState,
+  BrandingTemplateValues,
+} from '@/containers/BrandingTemplates/types';
 
 export interface EstimateBrandingState extends BrandingState {}
 

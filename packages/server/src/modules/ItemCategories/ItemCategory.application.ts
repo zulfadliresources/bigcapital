@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import {
-  IItemCategoriesFilter,
-  IItemCategoryOTD,
-} from './ItemCategory.interfaces';
+import { GetItemCategoriesQueryDto } from './dtos/GetItemCategoriesQuery.dto';
 import { CreateItemCategoryService } from './commands/CreateItemCategory.service';
 import { DeleteItemCategoryService } from './commands/DeleteItemCategory.service';
 import { EditItemCategoryService } from './commands/EditItemCategory.service';
 import { GetItemCategoryService } from './queries/GetItemCategory.service';
 import { GetItemCategoriesService } from './queries/GetItemCategories.service';
-import { CreateItemCategoryDto, EditItemCategoryDto } from './dtos/ItemCategory.dto';
+import { BulkDeleteItemCategoriesService } from './BulkDeleteItemCategories.service';
+import { ValidateBulkDeleteItemCategoriesService } from './ValidateBulkDeleteItemCategories.service';
+import {
+  CreateItemCategoryDto,
+  EditItemCategoryDto,
+} from './dtos/ItemCategory.dto';
 import { Knex } from 'knex';
 
 @Injectable()
@@ -25,6 +27,8 @@ export class ItemCategoryApplication {
     private readonly getItemCategoryService: GetItemCategoryService,
     private readonly deleteItemCategoryService: DeleteItemCategoryService,
     private readonly getItemCategoriesService: GetItemCategoriesService,
+    private readonly bulkDeleteItemCategoriesService: BulkDeleteItemCategoriesService,
+    private readonly validateBulkDeleteItemCategoriesService: ValidateBulkDeleteItemCategoriesService,
   ) {}
 
   /**
@@ -75,10 +79,38 @@ export class ItemCategoryApplication {
 
   /**
    * Retrieves the item categories list.
-   * @param {IItemCategoriesFilter} filterDTO - The item categories filter DTO.
+   * @param {GetItemCategoriesQueryDto} filterDTO - The item categories filter DTO.
    * @returns {Promise<GetItemCategoriesResponse>}
    */
-  public getItemCategories(filterDTO: Partial<IItemCategoriesFilter>) {
+  public getItemCategories(filterDTO: GetItemCategoriesQueryDto) {
     return this.getItemCategoriesService.getItemCategories(filterDTO);
+  }
+
+  /**
+   * Deletes multiple item categories in bulk.
+   * @param {number[]} itemCategoryIds - The item category ids to delete.
+   * @param {{ skipUndeletable?: boolean }} options - Delete options.
+   * @returns {Promise<void>}
+   */
+  public bulkDeleteItemCategories(
+    itemCategoryIds: number[],
+    options?: { skipUndeletable?: boolean },
+  ) {
+    return this.bulkDeleteItemCategoriesService.bulkDeleteItemCategories(
+      itemCategoryIds,
+      options,
+    );
+  }
+
+  /**
+   * Validates which item categories can be deleted and returns counts of
+   * deletable and non-deletable item categories.
+   * @param {number[]} itemCategoryIds - The item category ids to validate.
+   * @returns {Promise<{ deletableCount: number; nonDeletableCount: number; deletableIds: number[]; nonDeletableIds: number[]; }>}
+   */
+  public validateBulkDeleteItemCategories(itemCategoryIds: number[]) {
+    return this.validateBulkDeleteItemCategoriesService.validateBulkDeleteItemCategories(
+      itemCategoryIds,
+    );
   }
 }

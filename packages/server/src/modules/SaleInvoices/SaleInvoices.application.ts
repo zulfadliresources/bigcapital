@@ -12,17 +12,20 @@ import { GetSaleInvoiceState } from './queries/GetSaleInvoiceState.service';
 import { GetSaleInvoiceMailState } from './queries/GetSaleInvoiceMailState.service';
 import {
   ISaleInvoiceWriteoffDTO,
-  ISalesInvoicesFilter,
   SaleInvoiceMailState,
   SendInvoiceMailDTO,
 } from './SaleInvoice.types';
+import { GetSaleInvoicesQueryDto } from './dtos/GetSaleInvoicesQuery.dto';
 import { GetSaleInvoicesService } from './queries/GetSaleInvoices';
 import { SendSaleInvoiceMail } from './commands/SendSaleInvoiceMail';
+import { SaleInvoiceSmsNotification } from './SaleInvoiceSmsNotification';
 import {
   CreateSaleInvoiceDto,
   EditSaleInvoiceDto,
 } from './dtos/SaleInvoice.dto';
 import { GenerateShareLink } from './commands/GenerateInvoicePaymentLink.service';
+import { BulkDeleteSaleInvoicesService } from './BulkDeleteSaleInvoices.service';
+import { ValidateBulkDeleteSaleInvoicesService } from './ValidateBulkDeleteSaleInvoices.service';
 
 @Injectable()
 export class SaleInvoiceApplication {
@@ -41,6 +44,9 @@ export class SaleInvoiceApplication {
     private sendSaleInvoiceMailService: SendSaleInvoiceMail,
     private getSaleInvoiceMailStateService: GetSaleInvoiceMailState,
     private generateShareLinkService: GenerateShareLink,
+    private saleInvoiceSmsNotificationService: SaleInvoiceSmsNotification,
+    private bulkDeleteSaleInvoicesService: BulkDeleteSaleInvoicesService,
+    private validateBulkDeleteSaleInvoicesService: ValidateBulkDeleteSaleInvoicesService,
   ) {}
 
   /**
@@ -79,11 +85,36 @@ export class SaleInvoiceApplication {
   }
 
   /**
+   * Deletes multiple sale invoices.
+   * @param {number[]} saleInvoiceIds
+   * @return {Promise<void>}
+   */
+  public bulkDeleteSaleInvoices(
+    saleInvoiceIds: number[],
+    options?: { skipUndeletable?: boolean },
+  ) {
+    return this.bulkDeleteSaleInvoicesService.bulkDeleteSaleInvoices(
+      saleInvoiceIds,
+      options,
+    );
+  }
+
+  /**
+   * Validates which sale invoices can be deleted.
+   * @param {number[]} saleInvoiceIds
+   */
+  public validateBulkDeleteSaleInvoices(saleInvoiceIds: number[]) {
+    return this.validateBulkDeleteSaleInvoicesService.validateBulkDeleteSaleInvoices(
+      saleInvoiceIds,
+    );
+  }
+
+  /**
    * Retrieves the given sale invoice details.
    * @param {ISalesInvoicesFilter} filterDTO
    * @returns {Promise<{ salesInvoices: SaleInvoice[]; pagination: IPaginationMeta; filterMeta: IFilterMeta; }>}
    */
-  public getSaleInvoices(filterDTO: Partial<ISalesInvoicesFilter>) {
+  public getSaleInvoices(filterDTO: GetSaleInvoicesQueryDto) {
     return this.getSaleInvoicesService.getSaleInvoices(filterDTO);
   }
 
@@ -202,6 +233,46 @@ export class SaleInvoiceApplication {
   ): Promise<SaleInvoiceMailState> {
     return this.getSaleInvoiceMailStateService.getInvoiceMailState(
       saleInvoiceid,
+    );
+  }
+
+  /**
+   * Notify the customer of the given sale invoice by SMS.
+   * @param {number} saleInvoiceId - Sale invoice id.
+   * @param {Record<string, unknown>} smsOptions - SMS options.
+   * @returns {Promise<SaleInvoice>}
+   */
+  public notifySaleInvoiceBySms(
+    saleInvoiceId: number,
+    smsOptions: Record<string, unknown>,
+  ) {
+    const notificationKey =
+      (smsOptions?.notificationKey as string) ||
+      (smsOptions?.notification_key as string) ||
+      'details';
+    return this.saleInvoiceSmsNotificationService.triggerSms(
+      saleInvoiceId,
+      notificationKey as 'details' | 'reminder',
+    );
+  }
+
+  /**
+   * Retrieve the SMS details of the given sale invoice.
+   * @param {number} saleInvoiceId - Sale invoice id.
+   * @param {Record<string, unknown>} smsOptions - SMS options.
+   * @returns {Promise<Record<string, string>>}
+   */
+  public getSaleInvoiceSmsDetails(
+    saleInvoiceId: number,
+    smsOptions: Record<string, unknown>,
+  ) {
+    const notificationKey =
+      (smsOptions?.notificationKey as string) ||
+      (smsOptions?.notification_key as string) ||
+      'details';
+    return this.saleInvoiceSmsNotificationService.getSmsDetails(
+      saleInvoiceId,
+      notificationKey as 'details' | 'reminder',
     );
   }
 

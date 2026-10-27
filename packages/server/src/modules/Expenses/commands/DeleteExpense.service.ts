@@ -36,23 +36,18 @@ export class DeleteExpense {
   /**
    * Deletes the given expense.
    * @param {number} expenseId
-   * @param {ISystemUser} authorizedUser
+   * @param {Knex.Transaction} trx - Database transaction instance.
    */
-  public async deleteExpense(expenseId: number): Promise<void> {
-    // Retrieves the expense transaction with associated entries or
-    // throw not found error.
-    const oldExpense = await this.expenseModel()
-      .query()
-      .findById(expenseId)
-      .withGraphFetched('categories')
-      .throwIfNotFound();
-
-    // Validates the expense has no associated landed cost.
-    await this.validator.validateNoAssociatedLandedCost(expenseId);
-
+  public async deleteExpense(
+    expenseId: number,
+    trx?: Knex.Transaction,
+  ): Promise<void> {
     // Deletes expense transactions with associated transactions under
     // unit-of-work envirement.
     return this.uow.withTransaction(async (trx: Knex.Transaction) => {
+      // Validates the delete operation against the locked expense row.
+      const oldExpense = await this.validate(expenseId, trx);
+
       // Triggers `onExpenseDeleting` event.
       await this.eventEmitter.emitAsync(events.expenses.onDeleting, {
         trx,
@@ -74,6 +69,27 @@ export class DeleteExpense {
         oldExpense,
         trx,
       } as IExpenseEventDeletePayload);
-    });
+    }, trx);
+  }
+
+  /**
+   * Validates the delete expense operation against the locked expense row:
+   * existence and no associated landed cost.
+   * @param {number} expenseId - Expense id.
+   * @param {Knex.Transaction} trx - Locks the expense row (FOR UPDATE).
+   * @returns {Promise<Expense>} The locked expense.
+   */
+  async validate(expenseId: number, trx: Knex.Transaction): Promise<Expense> {
+    // Lock the expense row to serialize with concurrent operations.
+    const oldExpense = await this.expenseModel()
+      .query(trx)
+      .findById(expenseId)
+      .forUpdate()
+      .withGraphFetched('categories')
+      .throwIfNotFound();
+
+    // Validates the expense has no associated landed cost.
+    await this.validator.validateNoAssociatedLandedCost(expenseId, trx);
+    return oldExpense;
   }
 }

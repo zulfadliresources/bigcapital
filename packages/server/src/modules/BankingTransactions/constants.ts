@@ -27,7 +27,7 @@ export enum CASHFLOW_DIRECTION {
 }
 
 export enum CASHFLOW_TRANSACTION_TYPE {
-  ONWERS_DRAWING = 'OwnerDrawing',
+  OWNERS_DRAWING = 'OwnerDrawing',
   OWNER_CONTRIBUTION = 'OwnerContribution',
   OTHER_INCOME = 'OtherIncome',
   TRANSFER_FROM_ACCOUNT = 'TransferFromAccount',
@@ -36,7 +36,7 @@ export enum CASHFLOW_TRANSACTION_TYPE {
 }
 
 export const CASHFLOW_TRANSACTION_TYPE_META = {
-  [`${CASHFLOW_TRANSACTION_TYPE.ONWERS_DRAWING}`]: {
+  [`${CASHFLOW_TRANSACTION_TYPE.OWNERS_DRAWING}`]: {
     type: 'OwnerDrawing',
     direction: CASHFLOW_DIRECTION.OUT,
     creditType: [ACCOUNT_TYPE.EQUITY],
@@ -143,5 +143,6 @@ export const TransactionTypes = {
   RefundCreditNote: 'transaction_type.refund_credit_note',
   RefundVendorCredit: 'transaction_type.refund_vendor_credit',
   LandedCost: 'transaction_type.landed_cost',
+  WarehouseTransfer: 'transaction_type.warehouse_transfer',
   CashflowTransaction: CashflowTransactionTypes,
 };

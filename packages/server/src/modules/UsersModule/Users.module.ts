@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ActivateUserService } from './commands/ActivateUser.service';
 import { DeleteUserService } from './commands/DeleteUser.service';
 import { EditUserService } from './commands/EditUser.service';
@@ -16,13 +19,29 @@ import { UsersApplication } from './Users.application';
 import { GetUsersService } from './queries/GetUsers.service';
 import { AcceptInviteUserService } from './commands/AcceptInviteUser.service';
 import { InviteTenantUserService } from './commands/InviteUser.service';
+import { UserTenant } from '../System/models/UserTenant.model';
 import { UsersInviteController } from './UsersInvite.controller';
+import { UsersInvitePublicController } from './UsersInvitePublic.controller';
 import { InjectSystemModel } from '../System/SystemModels/SystemModels.module';
+import { SendInviteUserMailQueue } from './Users.constants';
+import InviteSendMainNotificationSubscribe from './subscribers/InviteSendMailNotification.subscriber';
+import { SendInviteUserMailProcessor } from './processors/SendInviteUserMail.processor';
+import { SendInviteUsersMailMessage } from './commands/SendInviteUsersMailMessage.service';
+import { SendBulkInvitesService } from './commands/SendBulkInvites.service';
+import { MailModule } from '../Mail/Mail.module';
 
-const models = [InjectSystemModel(UserInvite)];
+const models = [InjectSystemModel(UserInvite), InjectSystemModel(UserTenant)];
 
 @Module({
-  imports: [TenancyModule],
+  imports: [
+    TenancyModule,
+    MailModule,
+    BullModule.registerQueue({ name: SendInviteUserMailQueue }),
+    BullBoardModule.forFeature({
+      name: SendInviteUserMailQueue,
+      adapter: BullMQAdapter,
+    }),
+  ],
   exports: [...models],
   providers: [
     ...models,
@@ -34,13 +53,21 @@ const models = [InjectSystemModel(UserInvite)];
     GetUsersService,
     AcceptInviteUserService,
     InviteTenantUserService,
+    SendBulkInvitesService,
     PurgeUserAbilityCacheSubscriber,
     SyncTenantUserDeleteSubscriber,
     SyncTenantUserMutateSubscriber,
     SyncSystemSendInviteSubscriber,
     SyncTenantAcceptInviteSubscriber,
-    UsersApplication
+    InviteSendMainNotificationSubscribe,
+    SendInviteUserMailProcessor,
+    SendInviteUsersMailMessage,
+    UsersApplication,
   ],
-  controllers: [UsersController, UsersInviteController],
+  controllers: [
+    UsersController,
+    UsersInviteController,
+    UsersInvitePublicController,
+  ],
 })
 export class UsersModule {}

@@ -8,6 +8,8 @@ import {
   Query,
   ParseIntPipe,
   Put,
+  HttpCode,
+  UseGuards,
 } from '@nestjs/common';
 import { AccountsApplication } from './AccountsApplication.service';
 import { CreateAccountDTO } from './CreateAccount.dto';
@@ -27,17 +29,97 @@ import { GetAccountTransactionResponseDto } from './dtos/GetAccountTransactionRe
 import { GetAccountTransactionsQueryDto } from './dtos/GetAccountTransactionsQuery.dto';
 import { GetAccountsQueryDto } from './dtos/GetAccountsQuery.dto';
 import { ApiCommonHeaders } from '@/common/decorators/ApiCommonHeaders';
+import {
+  BulkDeleteDto,
+  ValidateBulkDeleteResponseDto,
+} from '@/common/dtos/BulkDelete.dto';
+import { BulkActivateAccountsDto } from './dtos/BulkActivateAccounts.dto';
+import { RequirePermission } from '@/modules/Roles/RequirePermission.decorator';
+import { PermissionGuard } from '@/modules/Roles/Permission.guard';
+import { AuthorizationGuard } from '@/modules/Roles/Authorization.guard';
+import { AbilitySubject } from '@/modules/Roles/Roles.types';
+import { AccountAction } from './Accounts.types';
 
 @Controller('accounts')
 @ApiTags('Accounts')
 @ApiExtraModels(AccountResponseDto)
 @ApiExtraModels(AccountTypeResponseDto)
 @ApiExtraModels(GetAccountTransactionResponseDto)
+@ApiExtraModels(ValidateBulkDeleteResponseDto)
 @ApiCommonHeaders()
+@UseGuards(AuthorizationGuard, PermissionGuard)
 export class AccountsController {
-  constructor(private readonly accountsApplication: AccountsApplication) { }
+  constructor(private readonly accountsApplication: AccountsApplication) {}
+
+  @Post('validate-bulk-delete')
+  @HttpCode(200)
+  @RequirePermission(AccountAction.DELETE, AbilitySubject.Account)
+  @ApiOperation({
+    summary:
+      'Validates which accounts can be deleted and returns counts of deletable and non-deletable accounts.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Validation completed. Returns counts and IDs of deletable and non-deletable accounts.',
+    schema: {
+      $ref: getSchemaPath(ValidateBulkDeleteResponseDto),
+    },
+  })
+  async validateBulkDeleteAccounts(
+    @Body() bulkDeleteDto: BulkDeleteDto,
+  ): Promise<ValidateBulkDeleteResponseDto> {
+    return this.accountsApplication.validateBulkDeleteAccounts(
+      bulkDeleteDto.ids,
+    );
+  }
+
+  @Post('bulk-delete')
+  @HttpCode(200)
+  @RequirePermission(AccountAction.DELETE, AbilitySubject.Account)
+  @ApiOperation({ summary: 'Deletes multiple accounts in bulk.' })
+  @ApiResponse({
+    status: 200,
+    description: 'The accounts have been successfully deleted.',
+  })
+  async bulkDeleteAccounts(
+    @Body() bulkDeleteDto: BulkDeleteDto,
+  ): Promise<void> {
+    return this.accountsApplication.bulkDeleteAccounts(bulkDeleteDto.ids, {
+      skipUndeletable: bulkDeleteDto.skipUndeletable ?? false,
+    });
+  }
+
+  @Post('bulk-activate')
+  @HttpCode(200)
+  @RequirePermission(AccountAction.EDIT, AbilitySubject.Account)
+  @ApiOperation({ summary: 'Activates multiple accounts in bulk.' })
+  @ApiResponse({
+    status: 200,
+    description: 'The accounts have been successfully activated.',
+  })
+  async bulkActivateAccounts(
+    @Body() dto: BulkActivateAccountsDto,
+  ): Promise<void> {
+    return this.accountsApplication.bulkActivateAccounts(dto.ids);
+  }
+
+  @Post('bulk-inactivate')
+  @HttpCode(200)
+  @RequirePermission(AccountAction.EDIT, AbilitySubject.Account)
+  @ApiOperation({ summary: 'Inactivates multiple accounts in bulk.' })
+  @ApiResponse({
+    status: 200,
+    description: 'The accounts have been successfully inactivated.',
+  })
+  async bulkInactivateAccounts(
+    @Body() dto: BulkActivateAccountsDto,
+  ): Promise<void> {
+    return this.accountsApplication.bulkInactivateAccounts(dto.ids);
+  }
 
   @Post()
+  @RequirePermission(AccountAction.CREATE, AbilitySubject.Account)
   @ApiOperation({ summary: 'Create an account' })
   @ApiResponse({
     status: 200,
@@ -48,6 +130,7 @@ export class AccountsController {
   }
 
   @Put(':id')
+  @RequirePermission(AccountAction.EDIT, AbilitySubject.Account)
   @ApiOperation({ summary: 'Edit the given account.' })
   @ApiResponse({
     status: 200,
@@ -68,6 +151,7 @@ export class AccountsController {
   }
 
   @Delete(':id')
+  @RequirePermission(AccountAction.DELETE, AbilitySubject.Account)
   @ApiOperation({ summary: 'Delete the given account.' })
   @ApiResponse({
     status: 200,
@@ -85,6 +169,8 @@ export class AccountsController {
   }
 
   @Post(':id/activate')
+  @HttpCode(200)
+  @RequirePermission(AccountAction.EDIT, AbilitySubject.Account)
   @ApiOperation({ summary: 'Activate the given account.' })
   @ApiResponse({
     status: 200,
@@ -102,6 +188,8 @@ export class AccountsController {
   }
 
   @Post(':id/inactivate')
+  @HttpCode(200)
+  @RequirePermission(AccountAction.EDIT, AbilitySubject.Account)
   @ApiOperation({ summary: 'Inactivate the given account.' })
   @ApiResponse({
     status: 200,
@@ -119,6 +207,7 @@ export class AccountsController {
   }
 
   @Get('types')
+  @RequirePermission(AccountAction.VIEW, AbilitySubject.Account)
   @ApiOperation({ summary: 'Retrieves the account types.' })
   @ApiResponse({
     status: 200,
@@ -135,6 +224,7 @@ export class AccountsController {
   }
 
   @Get('transactions')
+  @RequirePermission(AccountAction.VIEW, AbilitySubject.Account)
   @ApiOperation({ summary: 'Retrieves the account transactions.' })
   @ApiResponse({
     status: 200,
@@ -153,6 +243,7 @@ export class AccountsController {
   }
 
   @Get(':id')
+  @RequirePermission(AccountAction.VIEW, AbilitySubject.Account)
   @ApiOperation({ summary: 'Retrieves the account details.' })
   @ApiResponse({
     status: 200,
@@ -171,6 +262,7 @@ export class AccountsController {
   }
 
   @Get()
+  @RequirePermission(AccountAction.VIEW, AbilitySubject.Account)
   @ApiOperation({ summary: 'Retrieves the accounts.' })
   @ApiResponse({
     status: 200,

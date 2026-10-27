@@ -52,7 +52,10 @@ export class EditUserService {
     const tenantUser = await this.tenantUserModel()
       .query()
       .updateAndFetchById(userId, {
-        ...editUserDTO,
+        firstName: editUserDTO.firstName,
+        lastName: editUserDTO.lastName,
+        email: editUserDTO.email,
+        roleId: editUserDTO.roleId,
       });
     // Triggers `onTenantUserEdited` event.
     await this.eventEmitter.emitAsync(events.tenantUser.onEdited, {

@@ -44,13 +44,16 @@ export class UnlinkAttachment {
     validateLinkModelExists(attachableModel);
 
     const LinkModel = this.moduleRef.get(modelRef, { strict: false });
-    const foundLinkModel = await LinkModel.query(trx).findById(modelId);
+    const foundLinkModel = await LinkModel().query(trx).findById(modelId);
     validateLinkModelEntryExists(foundLinkModel);
 
-    const document = await this.documentModel().query(trx).findOne('key', filekey);
+    const document = await this.documentModel()
+      .query(trx)
+      .findOne('key', filekey);
 
     // Delete the document link.
-    await this.documentLinkModel().query(trx)
+    await this.documentLinkModel()
+      .query(trx)
       .where('modelRef', modelRef)
       .where('modelId', modelId)
       .where('documentId', document.id)

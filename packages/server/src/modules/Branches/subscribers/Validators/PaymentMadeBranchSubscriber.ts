@@ -11,13 +11,13 @@ import { events } from '@/common/events/events';
 export class PaymentMadeBranchValidateSubscriber {
   constructor(
     private readonly validateBranchExistance: ValidateBranchExistance,
-  ) { }
+  ) {}
 
   /**
    * Validate branch existance on estimate creating.
    * @param {ISaleEstimateCreatedPayload} payload
    */
-  @OnEvent(events.billPayment.onCreating)
+  @OnEvent(events.billPayment.onCreating, { suppressErrors: false })
   async validateBranchExistanceOnPaymentCreating({
     billPaymentDTO,
   }: IBillPaymentCreatingPayload) {
@@ -30,7 +30,7 @@ export class PaymentMadeBranchValidateSubscriber {
    * Validate branch existance once estimate editing.
    * @param {ISaleEstimateEditingPayload} payload
    */
-  @OnEvent(events.billPayment.onEditing)
+  @OnEvent(events.billPayment.onEditing, { suppressErrors: false })
   async validateBranchExistanceOnPaymentEditing({
     billPaymentDTO,
   }: IBillPaymentEditingPayload) {

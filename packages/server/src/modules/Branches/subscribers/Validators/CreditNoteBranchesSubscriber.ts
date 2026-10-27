@@ -9,13 +9,13 @@ import { ICreditNoteCreatingPayload } from '@/modules/CreditNotes/types/CreditNo
 export class CreditNoteBranchValidateSubscriber {
   constructor(
     private readonly validateBranchExistance: ValidateBranchExistance,
-  ) { }
+  ) {}
 
   /**
    * Validate branch existance on credit note creating.
    * @param {ICreditNoteCreatingPayload} payload
    */
-  @OnEvent(events.creditNote.onCreating)
+  @OnEvent(events.creditNote.onCreating, { suppressErrors: false })
   async validateBranchExistanceOnCreditCreating({
     creditNoteDTO,
   }: ICreditNoteCreatingPayload) {
@@ -28,7 +28,7 @@ export class CreditNoteBranchValidateSubscriber {
    * Validate branch existance once credit note editing.
    * @param {ICreditNoteEditingPayload} payload
    */
-  @OnEvent(events.creditNote.onEditing)
+  @OnEvent(events.creditNote.onEditing, { suppressErrors: false })
   async validateBranchExistanceOnCreditEditing({
     creditNoteEditDTO,
   }: ICreditNoteEditingPayload) {

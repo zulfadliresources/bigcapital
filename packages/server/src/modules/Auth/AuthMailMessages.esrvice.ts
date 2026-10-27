@@ -20,7 +20,7 @@ export class AuthenticationMailMesssages {
    * @returns {Mail}
    */
   resetPasswordMessage(user: ModelObject<SystemUser>, token: string) {
-    const baseURL = this.configService.get('baseURL');
+    const baseURL = this.configService.get('app.baseUrl');
 
     return new Mail()
       .setSubject('Bigcapital - Password Reset')
@@ -41,9 +41,9 @@ export class AuthenticationMailMesssages {
   }
 
   sendResetPasswordMail(user: ModelObject<SystemUser>, token: string) {
-      const mail = this.resetPasswordMessage(user, token);
+    const mail = this.resetPasswordMessage(user, token);
 
-      return this.mailTransporter.send(mail);
+    return this.mailTransporter.send(mail);
   }
 
   /**
@@ -54,7 +54,7 @@ export class AuthenticationMailMesssages {
    * @returns {Mail}
    */
   signupVerificationMail(email: string, fullName: string, token: string) {
-    const baseURL = this.configService.get('baseURL');
+    const baseURL = this.configService.get('app.baseUrl');
     const verifyUrl = `${baseURL}/auth/email_confirmation?token=${token}&email=${email}`;
 
     return new Mail()
@@ -72,11 +72,7 @@ export class AuthenticationMailMesssages {
   }
 
   sendSignupVerificationMail(email: string, fullName: string, token: string) {
-    const mail = this.signupVerificationMail(
-      email,
-      fullName,
-      token,
-    );
+    const mail = this.signupVerificationMail(email, fullName, token);
     return this.mailTransporter.send(mail);
   }
 }

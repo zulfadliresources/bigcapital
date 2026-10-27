@@ -1,3 +1,5 @@
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { SocketModule } from '../Socket/Socket.module';
@@ -14,7 +16,7 @@ import { AccountsModule } from '../Accounts/Accounts.module';
 import { BankingCategorizeModule } from '../BankingCategorize/BankingCategorize.module';
 import { BankingTransactionsModule } from '../BankingTransactions/BankingTransactions.module';
 import { PlaidItemService } from './command/PlaidItem';
-import { TenancyContext } from '../Tenancy/TenancyContext.service';
+import { TenancyModule } from '../Tenancy/Tenancy.module';
 import { InjectSystemModel } from '../System/SystemModels/SystemModels.module';
 import { SystemPlaidItem } from './models/SystemPlaidItem';
 import { BankingPlaidController } from './BankingPlaid.controller';
@@ -22,17 +24,32 @@ import { BankingPlaidWebhooksController } from './BankingPlaidWebhooks.controlle
 import { SetupPlaidItemTenantService } from './command/SetupPlaidItemTenant.service';
 import { UpdateBankingPlaidTransitionsQueueJob } from './types/BankingPlaid.types';
 import { PlaidFetchTransactionsProcessor } from './jobs/PlaidFetchTransactionsJob';
+import { PlaidWebhookVerificationService } from './PlaidWebhookVerification.service';
+import { BankingTransactionsRegonizeModule } from '../BankingTranasctionsRegonize/BankingTransactionsRegonize.module';
+import { RecognizeSyncedBankTranasctionsSubscriber } from './subscribers/RecognizeSyncedBankTransactions.subscriber';
 
 const models = [RegisterTenancyModel(PlaidItem)];
 
 @Module({
   imports: [
+    TenancyModule,
     SocketModule,
     PlaidModule,
     AccountsModule,
     BankingCategorizeModule,
     BankingTransactionsModule,
-    BullModule.registerQueue({ name: UpdateBankingPlaidTransitionsQueueJob }),
+    BankingTransactionsRegonizeModule,
+    BullModule.registerQueue({
+      name: UpdateBankingPlaidTransitionsQueueJob,
+      defaultJobOptions: {
+        removeOnComplete: true,
+        removeOnFail: true,
+      },
+    }),
+    BullBoardModule.forFeature({
+      name: UpdateBankingPlaidTransitionsQueueJob,
+      adapter: BullMQAdapter,
+    }),
     ...models,
   ],
   providers: [
@@ -44,11 +61,12 @@ const models = [RegisterTenancyModel(PlaidItem)];
     PlaidLinkTokenService,
     PlaidApplication,
     SetupPlaidItemTenantService,
-    TenancyContext,
+    PlaidWebhookVerificationService,
     PlaidFetchTransactionsProcessor,
     PlaidUpdateTransactionsOnItemCreatedSubscriber,
+    RecognizeSyncedBankTranasctionsSubscriber,
   ],
   exports: [...models],
   controllers: [BankingPlaidController, BankingPlaidWebhooksController],
 })
-export class BankingPlaidModule { }
+export class BankingPlaidModule {}

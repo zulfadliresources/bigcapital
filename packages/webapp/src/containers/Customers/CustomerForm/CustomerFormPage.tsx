@@ -1,74 +1,58 @@
-// @ts-nocheck
-import React from 'react';
 import { useParams, useHistory } from 'react-router-dom';
-import styled from 'styled-components';
-
-import { DashboardCard, DashboardInsider } from '@/components';
-
-import CustomerFormFormik from './CustomerFormFormik';
+import { CustomerFormFormik } from './CustomerFormFormik';
 import {
   CustomerFormProvider,
   useCustomerFormContext,
 } from './CustomerFormProvider';
+import type { CustomerFormValues } from './utils';
+import type { FormikHelpers } from 'formik';
+import { Box, DashboardInsider } from '@/components';
 
-/**
- * Customer form page loading.
- * @returns {JSX}
- */
-function CustomerFormPageLoading({ children }) {
-  const { isFormLoading } = useCustomerFormContext();
-
-  return (
-    <CustomerDashboardInsider loading={isFormLoading}>
-      {children}
-    </CustomerDashboardInsider>
-  );
-}
+type CustomerFormSubmitPayload = {
+  noRedirect?: boolean;
+};
 
 /**
  * Customer form page.
- * @returns {JSX}
  */
-export default function CustomerFormPage() {
+export function CustomerFormPage() {
+  const { id } = useParams<{ id?: string }>();
+  const customerId = id ? parseInt(id, 10) : undefined;
+
+  return (
+    <CustomerFormProvider customerId={customerId}>
+      <CustomerFormPageContent />
+    </CustomerFormProvider>
+  );
+}
+
+function CustomerFormPageContent() {
   const history = useHistory();
-  const { id } = useParams();
+  const { isFormLoading } = useCustomerFormContext();
 
-  const customerId = parseInt(id, 10);
-
-  // Handle the form submit success.
-  const handleSubmitSuccess = (values, formArgs, submitPayload) => {
+  const handleSubmitSuccess = (
+    _values: CustomerFormValues,
+    _formArgs: FormikHelpers<CustomerFormValues>,
+    submitPayload: CustomerFormSubmitPayload,
+  ) => {
     if (!submitPayload.noRedirect) {
       history.push('/customers');
     }
   };
+
   // Handle the form cancel button click.
   const handleFormCancel = () => {
     history.goBack();
   };
 
   return (
-    <CustomerFormProvider customerId={customerId}>
-      <CustomerFormPageLoading>
-        <DashboardCard page>
-          <CustomerFormPageFormik
-            onSubmitSuccess={handleSubmitSuccess}
-            onCancel={handleFormCancel}
-          />
-        </DashboardCard>
-      </CustomerFormPageLoading>
-    </CustomerFormProvider>
+    <DashboardInsider loading={isFormLoading}>
+      <Box mx={'auto'} maxWidth={800}>
+        <CustomerFormFormik
+          onSubmitSuccess={handleSubmitSuccess}
+          onCancel={handleFormCancel}
+        />
+      </Box>
+    </DashboardInsider>
   );
 }
-
-const CustomerFormPageFormik = styled(CustomerFormFormik)`
-  .page-form {
-    &__floating-actions {
-      margin-left: -40px;
-      margin-right: -40px;
-    }
-  }
-`;
-
-const CustomerDashboardInsider = styled(DashboardInsider)`
-  padding-bottom: 64px;
-`;

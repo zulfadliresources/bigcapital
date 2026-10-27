@@ -1,5 +1,6 @@
-import * as R from 'ramda';
 import { isEmpty } from 'lodash';
+import { constant, flow } from 'fp-ts/function';
+import { when } from '@/common/fp';
 import { ModelObject } from 'objection';
 import {
   IVendorBalanceSummaryVendor,
@@ -8,7 +9,11 @@ import {
 } from './VendorBalanceSummary.types';
 import { ContactBalanceSummaryReport } from '../ContactBalanceSummary/ContactBalanceSummary';
 import { Vendor } from '@/modules/Vendors/models/Vendor';
-import { INumberFormatQuery } from '../../types/Report.types';
+import {
+  INumberFormatQuery,
+  IFinancialReportMeta,
+  DEFAULT_REPORT_META,
+} from '../../types/Report.types';
 import { VendorBalanceSummaryRepository } from './VendorBalanceSummaryRepository';
 import { Ledger } from '@/modules/Ledger/Ledger';
 
@@ -21,22 +26,23 @@ export class VendorBalanceSummaryReport extends ContactBalanceSummaryReport {
 
   /**
    * Constructor method.
-   * @param {VendorBalanceSummaryRepository} repository - 
-   * @param {IVendorBalanceSummaryQuery} filter - 
+   * @param {VendorBalanceSummaryRepository} repository -
+   * @param {IVendorBalanceSummaryQuery} filter -
    */
   constructor(
     repository: VendorBalanceSummaryRepository,
     filter: IVendorBalanceSummaryQuery,
+    meta: IFinancialReportMeta,
   ) {
     super();
-    
+
     this.repository = repository;
     this.ledger = this.repository.ledger;
-    this.baseCurrency = this.repository.baseCurrency;
+    this.baseCurrency = meta.baseCurrency;
 
     this.filter = filter;
     this.numberFormat = this.filter.numberFormat;
-
+    this.dateFormat = meta.dateFormat || DEFAULT_REPORT_META.dateFormat;
   }
 
   /**
@@ -85,13 +91,13 @@ export class VendorBalanceSummaryReport extends ContactBalanceSummaryReport {
   private getVendorsSection(
     vendors: ModelObject<Vendor>[],
   ): IVendorBalanceSummaryVendor[] {
-    return R.compose(
-      R.when(this.isVendorsPostFilter, this.contactsFilter),
-      R.when(
-        R.always(this.filter.percentageColumn),
+    return flow(
+      this.vendorsMapper,
+      when(
+        constant(this.filter.percentageColumn),
         this.contactCamparsionPercentageOfColumn,
       ),
-      this.vendorsMapper,
+      when(this.isVendorsPostFilter, this.contactsFilter),
     )(vendors) as IVendorBalanceSummaryVendor[];
   }
 

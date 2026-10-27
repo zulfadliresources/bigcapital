@@ -43,11 +43,11 @@ export class InactivateUserService {
     // Throw serivce error if the user is already inactivated.
     this.throwErrorIfUserInactive(tenantUser);
 
-    // Marks the tenant user as active.
+    // Marks the tenant user as inactive.
     await this.tenantUserModel()
       .query()
       .findById(userId)
-      .update({ active: true });
+      .update({ active: false });
 
     // Triggers `onTenantUserActivated` event.
     await this.eventEmitter.emitAsync(events.tenantUser.onInactivated, {
@@ -65,7 +65,7 @@ export class InactivateUserService {
     userId: number,
     authorizedUser: ModelObject<TenantUser>,
   ) {
-    if (userId === authorizedUser.id) {
+    if (Number(userId) === authorizedUser.id) {
       throw new ServiceError(ERRORS.USER_SAME_THE_AUTHORIZED_USER);
     }
   }

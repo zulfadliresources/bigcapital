@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
-import { TenancyContext } from '../Tenancy/TenancyContext.service';
+import { TenancyModule } from '../Tenancy/Tenancy.module';
 import { TenancyDatabaseModule } from '../Tenancy/TenancyDB/TenancyDB.module';
-import { TransformerInjectable } from '../Transformer/TransformerInjectable.service';
 import { ActivateCustomer } from './commands/ActivateCustomer.service';
 import { CreateCustomer } from './commands/CreateCustomer.service';
 import { CustomerValidators } from './commands/CustomerValidators.service';
@@ -16,9 +15,22 @@ import { CustomersExportable } from './CustomersExportable';
 import { CustomersImportable } from './CustomersImportable';
 import { GetCustomers } from './queries/GetCustomers.service';
 import { DynamicListModule } from '../DynamicListing/DynamicList.module';
+import { BulkDeleteCustomersService } from './BulkDeleteCustomers.service';
+import { ValidateBulkDeleteCustomersService } from './ValidateBulkDeleteCustomers.service';
+import { LedgerModule } from '../Ledger/Ledger.module';
+import { AccountsModule } from '../Accounts/Accounts.module';
+import { CustomerGLEntries } from './CustomerGLEntries';
+import { CustomerGLEntriesStorage } from './CustomerGLEntriesStorage';
+import { CustomerWriteGLOpeningBalanceSubscriber } from './subscribers/CustomerGLEntriesSubscriber';
 
 @Module({
-  imports: [TenancyDatabaseModule, DynamicListModule],
+  imports: [
+    TenancyModule,
+    TenancyDatabaseModule,
+    DynamicListModule,
+    LedgerModule,
+    AccountsModule,
+  ],
   controllers: [CustomersController],
   providers: [
     ActivateCustomer,
@@ -31,12 +43,15 @@ import { DynamicListModule } from '../DynamicListing/DynamicList.module';
     GetCustomerService,
     CustomersApplication,
     DeleteCustomer,
-    TenancyContext,
-    TransformerInjectable,
     GetCustomerService,
     CustomersExportable,
     CustomersImportable,
     GetCustomers,
+    BulkDeleteCustomersService,
+    ValidateBulkDeleteCustomersService,
+    CustomerGLEntries,
+    CustomerGLEntriesStorage,
+    CustomerWriteGLOpeningBalanceSubscriber,
   ],
 })
 export class CustomersModule {}

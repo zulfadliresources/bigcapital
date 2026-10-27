@@ -5,14 +5,13 @@ import { EditVendorService } from './commands/EditVendor.service';
 import { DeleteVendorService } from './commands/DeleteVendor.service';
 import { EditOpeningBalanceVendorService } from './commands/EditOpeningBalanceVendor.service';
 import { GetVendorService } from './queries/GetVendor';
-import {
-  IVendorOpeningBalanceEditDTO,
-  IVendorsFilter,
-} from './types/Vendors.types';
+import { VendorOpeningBalanceEditDto } from './dtos/VendorOpeningBalanceEdit.dto';
 import { GetVendorsService } from './queries/GetVendors.service';
 import { CreateVendorDto } from './dtos/CreateVendor.dto';
 import { EditVendorDto } from './dtos/EditVendor.dto';
 import { GetVendorsQueryDto } from './dtos/GetVendorsQuery.dto';
+import { BulkDeleteVendorsService } from './BulkDeleteVendors.service';
+import { ValidateBulkDeleteVendorsService } from './ValidateBulkDeleteVendors.service';
 
 @Injectable()
 export class VendorsApplication {
@@ -23,6 +22,8 @@ export class VendorsApplication {
     private editOpeningBalanceService: EditOpeningBalanceVendorService,
     private getVendorService: GetVendorService,
     private getVendorsService: GetVendorsService,
+    private readonly bulkDeleteVendorsService: BulkDeleteVendorsService,
+    private readonly validateBulkDeleteVendorsService: ValidateBulkDeleteVendorsService,
   ) {}
 
   /**
@@ -54,14 +55,14 @@ export class VendorsApplication {
   }
 
   /**
-   * Changes the opening balance of the given customer.
-   * @param   {number} vendorId
-   * @param   {IVendorOpeningBalanceEditDTO} openingBalanceEditDTO
+   * Changes the opening balance of the given vendor.
+   * @param {number} vendorId
+   * @param  {VendorOpeningBalanceEditDto} openingBalanceEditDTO
    * @returns {Promise<IVendor>}
    */
   public editOpeningBalance(
     vendorId: number,
-    openingBalanceEditDTO: IVendorOpeningBalanceEditDTO,
+    openingBalanceEditDTO: VendorOpeningBalanceEditDto,
   ) {
     return this.editOpeningBalanceService.editOpeningBalance(
       vendorId,
@@ -85,5 +86,18 @@ export class VendorsApplication {
    */
   public getVendors(filterDTO: GetVendorsQueryDto) {
     return this.getVendorsService.getVendorsList(filterDTO);
+  }
+
+  public bulkDeleteVendors(
+    vendorIds: number[],
+    options?: { skipUndeletable?: boolean },
+  ) {
+    return this.bulkDeleteVendorsService.bulkDeleteVendors(vendorIds, options);
+  }
+
+  public validateBulkDeleteVendors(vendorIds: number[]) {
+    return this.validateBulkDeleteVendorsService.validateBulkDeleteVendors(
+      vendorIds,
+    );
   }
 }

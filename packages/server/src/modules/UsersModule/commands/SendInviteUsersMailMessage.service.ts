@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { ModelObject } from 'objection';
 import { Mail } from '@/modules/Mail/Mail';
 import { MailTransporter } from '@/modules/Mail/MailTransporter.service';
-import { SystemUser } from '@/modules/System/models/SystemUser';
 import { TenancyContext } from '@/modules/Tenancy/TenancyContext.service';
 import { UserInvite } from '../models/InviteUser.model';
 import { TenantUser } from '@/modules/Tenancy/TenancyModels/models/TenantUser.model';
@@ -27,8 +26,8 @@ export class SendInviteUsersMailMessage {
     invite: ModelObject<UserInvite>,
   ) {
     const tenant = await this.tenancyContext.getTenant(true);
-    const root = path.join(global.__views_dir, '/images/bigcapital.png');
-    const baseURL = this.configService.get('baseURL');
+    const root = path.join(global.__images_dirname, '/bigcapital.png');
+    const baseURL = this.configService.get('app.baseUrl');
 
     const mail = new Mail()
       .setSubject(`${fromUser.firstName} has invited you to join a Bigcapital`)

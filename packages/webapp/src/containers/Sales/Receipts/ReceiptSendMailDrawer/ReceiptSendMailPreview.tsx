@@ -1,7 +1,7 @@
 import { css } from '@emotion/css';
-import { Stack } from '@/components';
 import { ReceiptSendMailPreviewHeader } from './ReceiptSendMailPreviewHeader';
 import { ReceiptMailPreviewConnected } from './withReceiptMailReceiptPreviewProps';
+import { Stack } from '@/components';
 
 const receiptPreviewCss = css`
   margin: 0 auto;
@@ -13,7 +13,7 @@ const receiptPreviewCss = css`
 
 export function ReceiptSendMailPreview() {
   return (
-    <Stack>
+    <Stack spacing={0}>
       <ReceiptSendMailPreviewHeader />
 
       <Stack px={4} py={6}>

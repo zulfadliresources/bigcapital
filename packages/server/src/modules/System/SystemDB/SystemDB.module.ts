@@ -1,11 +1,13 @@
 import Knex from 'knex';
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DATE_ONLY_COLUMNS_OPTIONS } from '@/common/constants/database.constants';
 import {
   SystemKnexConnection,
   SystemKnexConnectionConfigure,
 } from './SystemDB.constants';
 import { knexSnakeCaseMappers } from 'objection';
+import { SystemDatabaseController } from './SystemDB.controller';
 
 const providers = [
   {
@@ -15,13 +17,16 @@ const providers = [
       client: configService.get('systemDatabase.client'),
       connection: {
         host: configService.get('systemDatabase.host'),
+        port: configService.get('systemDatabase.port'),
         user: configService.get('systemDatabase.user'),
         password: configService.get('systemDatabase.password'),
         database: configService.get('systemDatabase.databaseName'),
         charset: 'utf8',
+        ...DATE_ONLY_COLUMNS_OPTIONS,
       },
       migrations: {
         directory: configService.get('systemDatabase.migrationDir'),
+        loadExtensions: ['.js'],
       },
       seeds: {
         directory: configService.get('systemDatabase.seedsDir'),
@@ -41,6 +46,7 @@ const providers = [
 
 @Global()
 @Module({
+  controllers: [SystemDatabaseController],
   providers: [...providers],
   exports: [...providers],
 })

@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { Global, Module, Scope } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { TENANCY_DB_CONNECTION } from '../TenancyDB/TenancyDB.constants';
 import { Item } from '../../../modules/Items/models/Item';
 import { Account } from '@/modules/Accounts/models/Account.model';
@@ -22,8 +22,6 @@ import { Vendor } from '@/modules/Vendors/models/Vendor';
 import { Bill } from '@/modules/Bills/models/Bill';
 import { BillPayment } from '@/modules/BillPayments/models/BillPayment';
 import { BillPaymentEntry } from '@/modules/BillPayments/models/BillPaymentEntry';
-import { BillLandedCostEntry } from '@/modules/BillLandedCosts/models/BillLandedCostEntry';
-import { BillLandedCost } from '@/modules/BillLandedCosts/models/BillLandedCost';
 import { VendorCreditAppliedBill } from '@/modules/VendorCreditsApplyBills/models/VendorCreditAppliedBill';
 import { SaleInvoice } from '@/modules/SaleInvoices/models/SaleInvoice';
 import { PaymentIntegration } from '@/modules/StripePayment/models/PaymentIntegration.model';
@@ -63,8 +61,6 @@ const models = [
   Bill,
   BillPayment,
   BillPaymentEntry,
-  BillLandedCost,
-  BillLandedCostEntry,
   VendorCreditAppliedBill,
   SaleInvoice,
   CreditNoteAppliedInvoice,
@@ -107,4 +103,4 @@ const modelProviders = models.map((model) => RegisterTenancyModel(model));
   imports: [...modelProviders],
   exports: [...modelProviders],
 })
-export class TenancyModelsModule { }
+export class TenancyModelsModule {}

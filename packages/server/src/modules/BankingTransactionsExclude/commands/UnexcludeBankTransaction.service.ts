@@ -4,8 +4,8 @@ import {
   validateTransactionShouldBeExcluded,
 } from './utils';
 import {
-  IBankTransactionExcludedEventPayload,
-  IBankTransactionExcludingEventPayload,
+  IBankTransactionUnexcludedEventPayload,
+  IBankTransactionUnexcludingEventPayload,
 } from '../types/BankTransactionsExclude.types';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Inject, Injectable } from '@nestjs/common';
@@ -50,7 +50,9 @@ export class UnexcludeBankTransactionService {
     return this.uow.withTransaction(async (trx: Knex.Transaction) => {
       await this.eventEmitter.emitAsync(events.bankTransactions.onUnexcluding, {
         uncategorizedTransactionId,
-      } as IBankTransactionExcludingEventPayload);
+        uncategorizedTransaction: oldUncategorizedTransaction,
+        trx,
+      } as IBankTransactionUnexcludingEventPayload);
 
       await this.uncategorizedBankTransactionModel()
         .query(trx)
@@ -61,7 +63,9 @@ export class UnexcludeBankTransactionService {
 
       await this.eventEmitter.emitAsync(events.bankTransactions.onUnexcluded, {
         uncategorizedTransactionId,
-      } as IBankTransactionExcludedEventPayload);
+        uncategorizedTransaction: oldUncategorizedTransaction,
+        trx,
+      } as IBankTransactionUnexcludedEventPayload);
     });
   }
 }

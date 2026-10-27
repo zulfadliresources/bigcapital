@@ -4,9 +4,11 @@ import { EditExpense } from './commands/EditExpense.service';
 import { DeleteExpense } from './commands/DeleteExpense.service';
 import { PublishExpense } from './commands/PublishExpense.service';
 import { GetExpenseService } from './queries/GetExpense.service';
-import { IExpensesFilter } from './interfaces/Expenses.interface';
 import { GetExpensesService } from './queries/GetExpenses.service';
 import { CreateExpenseDto, EditExpenseDto } from './dtos/Expense.dto';
+import { GetExpensesQueryDto } from './dtos/GetExpensesQuery.dto';
+import { BulkDeleteExpensesService } from './BulkDeleteExpenses.service';
+import { ValidateBulkDeleteExpensesService } from './ValidateBulkDeleteExpenses.service';
 
 @Injectable()
 export class ExpensesApplication {
@@ -17,6 +19,8 @@ export class ExpensesApplication {
     private readonly publishExpenseService: PublishExpense,
     private readonly getExpenseService: GetExpenseService,
     private readonly getExpensesService: GetExpensesService,
+    private readonly bulkDeleteExpensesService: BulkDeleteExpensesService,
+    private readonly validateBulkDeleteExpensesService: ValidateBulkDeleteExpensesService,
   ) {}
 
   /**
@@ -48,6 +52,30 @@ export class ExpensesApplication {
   }
 
   /**
+   * Deletes expenses in bulk.
+   * @param {number[]} expenseIds - Expense ids.
+   */
+  public bulkDeleteExpenses(
+    expenseIds: number[],
+    options?: { skipUndeletable?: boolean },
+  ) {
+    return this.bulkDeleteExpensesService.bulkDeleteExpenses(
+      expenseIds,
+      options,
+    );
+  }
+
+  /**
+   * Validates which expenses can be deleted.
+   * @param {number[]} expenseIds - Expense ids.
+   */
+  public validateBulkDeleteExpenses(expenseIds: number[]) {
+    return this.validateBulkDeleteExpensesService.validateBulkDeleteExpenses(
+      expenseIds,
+    );
+  }
+
+  /**
    * Publishes the given expense.
    * @param {number} expenseId - Expense id.
    * @returns {Promise<void>}
@@ -67,9 +95,9 @@ export class ExpensesApplication {
 
   /**
    * Retrieve expenses paginated list.
-   * @param  {IExpensesFilter} expensesFilter
+   * @param  {GetExpensesQueryDto} filterDTO
    */
-  public getExpenses(filterDTO: Partial<IExpensesFilter>) {
+  public getExpenses(filterDTO: GetExpensesQueryDto) {
     return this.getExpensesService.getExpensesList(filterDTO);
   }
 }

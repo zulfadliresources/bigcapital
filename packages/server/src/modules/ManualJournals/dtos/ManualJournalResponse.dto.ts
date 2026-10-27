@@ -1,14 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  IsArray,
-  IsBoolean,
-  IsDate,
-  IsNumber,
-  IsOptional,
-  IsString,
-  ValidateNested,
-} from 'class-validator';
+import { IsArray, ValidateNested } from 'class-validator';
+import { AccountingBasis } from '@/common/types/AccountingBasis';
 
 export class ManualJournalEntryResponseDto {
   @ApiProperty({ description: 'Entry index', example: 1 })
@@ -61,6 +54,15 @@ export class ManualJournalResponseDto {
   @ApiPropertyOptional({ description: 'Journal type', example: 'General' })
   journalType?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Accounting basis of the journal entries; null means general, which appears in both cash and accrual reports',
+    enum: AccountingBasis,
+    nullable: true,
+    example: AccountingBasis.Accrual,
+  })
+  basis?: AccountingBasis | null;
+
   @ApiPropertyOptional({ description: 'Reference number', example: 'REF-001' })
   reference?: string;
 
@@ -84,7 +86,7 @@ export class ManualJournalResponseDto {
 
   @ApiPropertyOptional({
     description: 'Published date',
-    example: '2024-03-20T10:00:00Z',
+    example: '2024-03-20',
   })
   publishedAt?: Date;
 

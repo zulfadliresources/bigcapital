@@ -4,12 +4,14 @@ import { EditManualJournal } from './commands/EditManualJournal.service';
 import { PublishManualJournal } from './commands/PublishManualJournal.service';
 import { GetManualJournal } from './queries/GetManualJournal.service';
 import { DeleteManualJournalService } from './commands/DeleteManualJournal.service';
-import { IManualJournalsFilter } from './types/ManualJournals.types';
 import {
   CreateManualJournalDto,
   EditManualJournalDto,
 } from './dtos/ManualJournal.dto';
+import { GetManualJournalsQueryDto } from './dtos/GetManualJournalsQuery.dto';
 import { GetManualJournals } from './queries/GetManualJournals.service';
+import { BulkDeleteManualJournalsService } from './BulkDeleteManualJournals.service';
+import { ValidateBulkDeleteManualJournalsService } from './ValidateBulkDeleteManualJournals.service';
 // import { GetManualJournals } from './queries/GetManualJournals';
 
 @Injectable()
@@ -21,6 +23,8 @@ export class ManualJournalsApplication {
     private publishManualJournalService: PublishManualJournal,
     private getManualJournalService: GetManualJournal,
     private getManualJournalsService: GetManualJournals,
+    private bulkDeleteManualJournalsService: BulkDeleteManualJournalsService,
+    private validateBulkDeleteManualJournalsService: ValidateBulkDeleteManualJournalsService,
   ) {}
 
   /**
@@ -58,6 +62,30 @@ export class ManualJournalsApplication {
   };
 
   /**
+   * Bulk deletes manual journals.
+   * @param {number[]} manualJournalIds
+   */
+  public bulkDeleteManualJournals = (
+    manualJournalIds: number[],
+    options?: { skipUndeletable?: boolean },
+  ) => {
+    return this.bulkDeleteManualJournalsService.bulkDeleteManualJournals(
+      manualJournalIds,
+      options,
+    );
+  };
+
+  /**
+   * Validates which manual journals can be deleted.
+   * @param {number[]} manualJournalIds
+   */
+  public validateBulkDeleteManualJournals = (manualJournalIds: number[]) => {
+    return this.validateBulkDeleteManualJournalsService.validateBulkDeleteManualJournals(
+      manualJournalIds,
+    );
+  };
+
+  /**
    * Publish the given manual journal.
    * @param {number} manualJournalId - Manual journal id.
    */
@@ -77,9 +105,9 @@ export class ManualJournalsApplication {
 
   /**
    * Retrieves the paginated manual journals.
-   * @param {IManualJournalsFilter} filterDTO
+   * @param {GetManualJournalsQueryDto} filterDTO
    */
-  public getManualJournals = (filterDTO: Partial<IManualJournalsFilter>) => {
+  public getManualJournals = (filterDTO: GetManualJournalsQueryDto) => {
     return this.getManualJournalsService.getManualJournals(filterDTO);
   };
 }

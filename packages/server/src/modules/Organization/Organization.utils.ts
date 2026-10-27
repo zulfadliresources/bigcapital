@@ -1,5 +1,4 @@
 import { defaultTo } from 'lodash';
-import { IOrganizationBuildDTO } from './Organization.types';
 import { BuildOrganizationDto } from './dtos/Organization.dto';
 
 /**
@@ -12,6 +11,6 @@ export const transformBuildDto = (
 ): BuildOrganizationDto => {
   return {
     ...buildDTO,
-    dateFormat: defaultTo(buildDTO.dateFormat, 'DD MMM yyyy'),
+    dateFormat: defaultTo(buildDTO.dateFormat, 'DD MMM YYYY'),
   };
 };

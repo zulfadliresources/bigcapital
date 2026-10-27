@@ -3,7 +3,6 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBody,
-  ApiOkResponse,
   ApiExtraModels,
   getSchemaPath,
   ApiParam,
@@ -17,6 +16,7 @@ import {
   HttpCode,
   Param,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { BuildOrganizationService } from './commands/BuildOrganization.service';
 import {
   BuildOrganizationDto,
@@ -27,6 +27,7 @@ import { UpdateOrganizationService } from './commands/UpdateOrganization.service
 import { IgnoreTenantInitializedRoute } from '../Tenancy/EnsureTenantIsInitialized.guard';
 import { IgnoreTenantSeededRoute } from '../Tenancy/EnsureTenantIsSeeded.guards';
 import { IgnoreTenantModelsInitialize } from '../Tenancy/TenancyInitializeModels.guard';
+import { IgnoreUserVerifiedRoute } from '../Auth/guards/EnsureUserVerified.guard';
 import { GetBuildOrganizationBuildJob } from './commands/GetBuildOrganizationJob.service';
 import { OrganizationBaseCurrencyLocking } from './Organization/OrganizationBaseCurrencyLocking.service';
 import {
@@ -34,7 +35,9 @@ import {
   OrganizationBuiltResponseExample,
 } from './Organization.swagger';
 import { GetCurrentOrganizationResponseDto } from './dtos/GetCurrentOrganizationResponse.dto';
+import { OrganizationBuildJobResponseDto } from './dtos/OrganizationBuildJobResponse.dto';
 import { ApiCommonHeaders } from '@/common/decorators/ApiCommonHeaders';
+import { OrgBaseCurrencyMutateAbilitiesResponseDto } from './dtos/OrgBaseCurrencyMutateAbilitiesResponse.dto';
 
 @ApiTags('Organization')
 @Controller('organization')
@@ -42,6 +45,8 @@ import { ApiCommonHeaders } from '@/common/decorators/ApiCommonHeaders';
 @IgnoreTenantSeededRoute()
 @IgnoreTenantModelsInitialize()
 @ApiExtraModels(GetCurrentOrganizationResponseDto)
+@ApiExtraModels(OrganizationBuildJobResponseDto)
+@ApiExtraModels(OrgBaseCurrencyMutateAbilitiesResponseDto)
 @ApiCommonHeaders()
 export class OrganizationController {
   constructor(
@@ -50,7 +55,7 @@ export class OrganizationController {
     private readonly updateOrganizationService: UpdateOrganizationService,
     private readonly getBuildOrganizationJobService: GetBuildOrganizationBuildJob,
     private readonly orgBaseCurrencyLockingService: OrganizationBaseCurrencyLocking,
-  ) { }
+  ) {}
 
   @Post('build')
   @HttpCode(200)
@@ -77,6 +82,7 @@ export class OrganizationController {
   }
 
   @Get('build/:buildJobId')
+  @Throttle({ default: { limit: 300, ttl: 60000 } }) // 300 req/min
   @ApiParam({
     name: 'buildJobId',
     required: true,
@@ -85,12 +91,20 @@ export class OrganizationController {
   })
   @HttpCode(200)
   @ApiOperation({ summary: 'Gets the organization build job details' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the organization build job details',
+    schema: {
+      $ref: getSchemaPath(OrganizationBuildJobResponseDto),
+    },
+  })
   async buildJob(@Param('buildJobId') buildJobId: string) {
     return this.getBuildOrganizationJobService.getJobDetails(buildJobId);
   }
 
   @Get('current')
   @HttpCode(200)
+  @IgnoreUserVerifiedRoute()
   @ApiOperation({ summary: 'Get current organization' })
   @ApiResponse({
     status: 200,
@@ -107,6 +121,14 @@ export class OrganizationController {
   }
 
   @Get('base-currency-mutate')
+  @ApiOperation({
+    summary: 'Retrieves the base currency mutation lock abilities.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The base currency mutation abilities.',
+    schema: { $ref: getSchemaPath(OrgBaseCurrencyMutateAbilitiesResponseDto) },
+  })
   async baseCurrencyMutate() {
     const abilities =
       await this.orgBaseCurrencyLockingService.baseCurrencyMutateLocks();

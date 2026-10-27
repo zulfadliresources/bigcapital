@@ -4,6 +4,7 @@ import { IContactAddressDTO } from '@/modules/Contacts/types/Contacts.types';
 import { IDynamicListFilter } from '@/modules/DynamicListing/DynamicFilter/DynamicFilter.types';
 import { IFilterMeta, IPaginationMeta } from '@/interfaces/Model';
 import { CreateCustomerDto } from '../dtos/CreateCustomer.dto';
+import { CustomerOpeningBalanceEditDto } from '../dtos/CustomerOpeningBalanceEdit.dto';
 import { EditCustomerDto } from '../dtos/EditCustomer.dto';
 
 // Customer Interfaces.
@@ -31,6 +32,7 @@ export interface ICustomerNewDTO extends IContactAddressDTO {
 
   note?: string;
   active?: boolean;
+  code?: string;
 }
 
 export interface ICustomerEditDTO extends IContactAddressDTO {
@@ -49,6 +51,7 @@ export interface ICustomerEditDTO extends IContactAddressDTO {
 
   note?: string;
   active?: boolean;
+  code?: string;
 }
 
 export interface ICustomersFilter extends IDynamicListFilter {
@@ -58,7 +61,7 @@ export interface ICustomersFilter extends IDynamicListFilter {
 }
 
 export interface GetCustomersResponse {
-  customers: Customer[];
+  data: Customer[];
   pagination: IPaginationMeta;
   filterMeta: IFilterMeta;
 }
@@ -113,29 +116,21 @@ export enum VendorAction {
   View = 'View',
 }
 
-export interface ICustomerOpeningBalanceEditDTO {
-  openingBalance: number;
-  openingBalanceAt: Date | string;
-  openingBalanceExchangeRate: number;
-  openingBalanceBranchId?: number;
-}
-
 export interface ICustomerOpeningBalanceEditingPayload {
   oldCustomer: Customer;
-  openingBalanceEditDTO: ICustomerOpeningBalanceEditDTO;
+  openingBalanceEditDTO: CustomerOpeningBalanceEditDto;
   trx?: Knex.Transaction;
 }
 
 export interface ICustomerOpeningBalanceEditedPayload {
   customer: Customer;
   oldCustomer: Customer;
-  openingBalanceEditDTO: ICustomerOpeningBalanceEditDTO;
+  openingBalanceEditDTO: CustomerOpeningBalanceEditDto;
   trx: Knex.Transaction;
 }
 
-
 export interface ICustomerActivatingPayload {
-  trx: Knex.Transaction,
+  trx: Knex.Transaction;
   oldCustomer: Customer;
 }
 

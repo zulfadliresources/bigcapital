@@ -51,11 +51,10 @@ export class TriggerRecognizedTransactionsSubscriber {
    */
   @OnEvent(events.bankRules.onEdited)
   async recognizedTransactionsOnRuleEdited({
-    editRuleDTO,
+    editRuleDTO: _editRuleDTO,
     oldBankRule,
     bankRule,
   }: IBankRuleEventEditedPayload) {
-    
     // Cannot continue if the new and old bank rule values are the same,
     // after excluding `createdAt` and `updatedAt` dates.
     if (
@@ -69,10 +68,13 @@ export class TriggerRecognizedTransactionsSubscriber {
     const tenantPayload = await this.tenancyContect.getTenantJobPayload();
     const payload = {
       ruleId: bankRule.id,
+      shouldRevert: true,
       ...tenantPayload,
     } as RecognizeUncategorizedTransactionsJobPayload;
 
     // Re-recognize the transactions based on the new rules.
+    // Setting shouldRevert to true ensures that transactions previously recognized
+    // by this or lower-priority rules are re-evaluated against the updated rule.
     await this.recognizeTransactionsQueue.add(
       RecognizeUncategorizedTransactionsJob,
       payload,
@@ -106,7 +108,7 @@ export class TriggerRecognizedTransactionsSubscriber {
    */
   @OnEvent(events.import.onImportCommitted)
   async triggerRecognizeTransactionsOnImportCommitted({
-    importId,
+    importId: _importId,
 
     // @ts-ignore
   }: IImportFileCommitedEventPayload) {

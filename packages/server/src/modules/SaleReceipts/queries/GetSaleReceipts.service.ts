@@ -4,13 +4,10 @@ import { SaleReceiptTransformer } from './SaleReceiptTransformer';
 import { TransformerInjectable } from '@/modules/Transformer/TransformerInjectable.service';
 import { DynamicListService } from '@/modules/DynamicListing/DynamicList.service';
 import { IFilterMeta, IPaginationMeta } from '@/interfaces/Model';
-import { ISalesReceiptsFilter } from '../types/SaleReceipts.types';
+import { GetSaleReceiptsQueryDto } from '../dtos/GetSaleReceiptsQuery.dto';
 import { SaleReceipt } from '../models/SaleReceipt';
 import { TenantModelProxy } from '@/modules/System/models/TenantBaseModel';
 
-interface GetSaleReceiptsSettings {
-  fetchEntriesGraph?: boolean;
-}
 @Injectable()
 export class GetSaleReceiptsService {
   constructor(
@@ -23,9 +20,9 @@ export class GetSaleReceiptsService {
 
   /**
    * Retrieve sales receipts paginated and filterable list.
-   * @param {ISalesReceiptsFilter} salesReceiptsFilter - Sales receipts filter.
+   * @param {GetSaleReceiptsQueryDto} filterDTO - Sales receipts filter.
    */
-  public async getSaleReceipts(filterDTO: ISalesReceiptsFilter): Promise<{
+  public async getSaleReceipts(filterDTO: GetSaleReceiptsQueryDto): Promise<{
     data: SaleReceipt[];
     pagination: IPaginationMeta;
     filterMeta: IFilterMeta;
@@ -53,7 +50,9 @@ export class GetSaleReceiptsService {
         builder.withGraphFetched('entries.item');
 
         dynamicFilter.buildQuery()(builder);
-        _filterDto?.filterQuery && _filterDto?.filterQuery(builder);
+        if (_filterDto?.filterQuery) {
+          _filterDto?.filterQuery(builder);
+        }
       })
       .pagination(filter.page - 1, filter.pageSize);
 

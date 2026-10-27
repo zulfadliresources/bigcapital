@@ -1,24 +1,28 @@
-// @ts-nocheck
 import React from 'react';
 import intl from 'react-intl-universal';
 import styled from 'styled-components';
-
-import { ReportDataTable, FinancialSheet } from '@/components';
-
-import { usePurchaseByItemsContext } from './PurchasesByItemsProvider';
-
-import { tableRowTypesToClassnames } from '@/utils';
-import { TableStyle } from '@/constants';
+import { getReportRowTestId } from '../reportTestIds';
 import { usePurchasesByItemsTableColumns } from './dynamicColumns';
+import { usePurchaseByItemsContext } from './PurchasesByItemsProvider';
+import { ReportDataTable, FinancialSheet } from '@/components';
+import { TableStyle } from '@/constants';
+import { tableRowTypesToClassnames } from '@/utils';
+
+interface PurchasesByItemsTableProps {
+  companyName: string;
+}
 
 /**
  * Purchases by items data table.
  */
-export default function PurchasesByItemsTable({ companyName }) {
+export function PurchasesByItemsTable({
+  companyName,
+}: PurchasesByItemsTableProps) {
   // Purchases by items context.
-  const {
-    purchaseByItems: { table, query },
-  } = usePurchaseByItemsContext();
+  const { purchaseByItems } = usePurchaseByItemsContext();
+
+  const table = (purchaseByItems as any)?.table;
+  const meta = (purchaseByItems as any)?.meta;
 
   // Purchases by items table columns.
   const columns = usePurchasesByItemsTableColumns();
@@ -27,8 +31,7 @@ export default function PurchasesByItemsTable({ companyName }) {
     <PurchasesByItemsSheet
       companyName={companyName}
       sheetType={intl.get('purchases_by_items')}
-      fromDate={query.from_date}
-      toDate={query.to_date}
+      dateText={meta?.formattedDateRange ?? meta?.formattedAsDate}
     >
       <PurchasesByItemsDataTable
         columns={columns}
@@ -38,6 +41,7 @@ export default function PurchasesByItemsTable({ companyName }) {
         expandColumnSpace={1}
         sticky={true}
         rowClassNames={tableRowTypesToClassnames}
+        rowTestId={getReportRowTestId('purchases-by-items')}
         noResults={intl.get(
           'there_were_no_purchases_during_the_selected_date_range',
         )}

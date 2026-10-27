@@ -1,37 +1,36 @@
-// @ts-nocheck
-import React from 'react';
-import styled from 'styled-components';
+import { FormikHelpers } from 'formik';
 import { useParams, useHistory } from 'react-router-dom';
-
-import '@/style/pages/Vendors/PageForm.scss';
-
-import { DashboardCard, DashboardInsider } from '@/components';
+import { VendorFormFormik } from './VendorFormFormik';
 import { VendorFormProvider, useVendorFormContext } from './VendorFormProvider';
-import VendorFormFormik from './VendorFormFormik';
+import type { VendorFormValues } from './utils';
+import type { VendorFormSubmitPayload } from './VendorFormProvider';
+import { Box, DashboardInsider } from '@/components';
 
 /**
  * Vendor form page loading wrapper.
- * @returns {JSX}
  */
-function VendorFormPageLoading({ children }) {
+function VendorFormPageLoading({ children }: { children: React.ReactNode }) {
   const { isFormLoading } = useVendorFormContext();
 
   return (
-    <VendorDashboardInsider loading={isFormLoading}>
-      {children}
-    </VendorDashboardInsider>
+    <DashboardInsider loading={isFormLoading}>{children}</DashboardInsider>
   );
 }
 
 /**
  * Vendor form page.
  */
-export default function VendorFormPage() {
+export function VendorFormPage() {
   const history = useHistory();
-  const { id } = useParams();
+  const { id } = useParams<{ id?: string }>();
+  const vendorId = id ? parseInt(id, 10) : undefined;
 
   // Handle the form submit success.
-  const handleSubmitSuccess = (values, formArgs, submitPayload) => {
+  const handleSubmitSuccess = (
+    _values: VendorFormValues,
+    _formArgs: FormikHelpers<VendorFormValues>,
+    submitPayload: VendorFormSubmitPayload,
+  ) => {
     if (!submitPayload.noRedirect) {
       history.push('/vendors');
     }
@@ -42,28 +41,15 @@ export default function VendorFormPage() {
   };
 
   return (
-    <VendorFormProvider vendorId={id}>
+    <VendorFormProvider vendorId={vendorId}>
       <VendorFormPageLoading>
-        <DashboardCard page>
-          <VendorFormPageFormik
+        <Box mx={'auto'} maxWidth={800}>
+          <VendorFormFormik
             onSubmitSuccess={handleSubmitSuccess}
             onCancel={handleFormCancel}
           />
-        </DashboardCard>
+        </Box>
       </VendorFormPageLoading>
     </VendorFormProvider>
   );
 }
-
-const VendorFormPageFormik = styled(VendorFormFormik)`
-  .page-form {
-    &__floating-actions {
-      margin-left: -40px;
-      margin-right: -40px;
-    }
-  }
-`;
-
-const VendorDashboardInsider = styled(DashboardInsider)`
-  padding-bottom: 64px;
-`;

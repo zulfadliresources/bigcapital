@@ -1,33 +1,42 @@
-// @ts-nocheck
-import React from 'react';
+import React, { ComponentType, LazyExoticComponent } from 'react';
 
-const ItemDeleteAlert = React.lazy(
-  () => import('@/containers/Alerts/Items/ItemDeleteAlert'),
+const ItemDeleteAlert = React.lazy(() =>
+  import('@/containers/Alerts/Items/ItemDeleteAlert').then((m) => ({
+    default: m.ItemDeleteAlert,
+  })),
 );
 
-const ItemInactivateAlert = React.lazy(
-  () => import('@/containers/Alerts/Items/ItemInactivateAlert'),
+const ItemInactivateAlert = React.lazy(() =>
+  import('@/containers/Alerts/Items/ItemInactivateAlert').then((m) => ({
+    default: m.ItemInactivateAlert,
+  })),
 );
 
-const ItemActivateAlert = React.lazy(
-  () => import('@/containers/Alerts/Items/ItemActivateAlert'),
+const ItemActivateAlert = React.lazy(() =>
+  import('@/containers/Alerts/Items/ItemActivateAlert').then((m) => ({
+    default: m.ItemActivateAlert,
+  })),
 );
 
-const ItemBulkDeleteAlert = React.lazy(
-  () => import('@/containers/Alerts/Items/ItemBulkDeleteAlert'),
+// Note: lowercase name mirrors the module's export name.
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const cancelUnlockingPartialAlert = React.lazy(() =>
+  import(
+    '@/containers/Alerts/TransactionLocking/cancelUnlockingPartialAlert'
+  ).then((m) => ({ default: m.cancelUnlockingPartialAlert })),
 );
 
-const cancelUnlockingPartialAlert = React.lazy(
-  () =>
-    import(
-      '@/containers/Alerts/TransactionLocking/cancelUnlockingPartialAlert'
-    ),
-);
+void cancelUnlockingPartialAlert;
+
+interface AlertItem {
+  name: string;
+  component: LazyExoticComponent<ComponentType<any>>;
+}
 
 /**
  * Items alert.
  */
-export default [
+export const ItemsAlerts: AlertItem[] = [
   {
     name: 'item-delete',
     component: ItemDeleteAlert,
@@ -39,9 +48,5 @@ export default [
   {
     name: 'item-activate',
     component: ItemActivateAlert,
-  },
-  {
-    name: 'items-bulk-delete',
-    component: ItemBulkDeleteAlert,
   },
 ];

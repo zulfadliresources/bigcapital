@@ -50,7 +50,7 @@ export class DecrementUncategorizedTransactionOnExclude {
     trx,
   }: IBankTransactionUnexcludedEventPayload) {
     const transaction = await this.uncategorizedBankTransaction()
-      .query()
+      .query(trx)
       .findById(uncategorizedTransactionId);
     //
     await this.account()

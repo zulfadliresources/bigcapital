@@ -1,5 +1,4 @@
 import * as moment from 'moment';
-import * as R from 'ramda';
 import { ITransactionsByContactsContact } from './TransactionsByContact.types';
 import { ITableRow } from '../../types/Table.types';
 import { tableMapper, tableRowMapper } from '../../utils/Table.utils';
@@ -14,9 +13,10 @@ enum ROW_TYPE {
 
 export class TransactionsByContactsTableRows {
   public i18n: I18nService;
+  public dateFormat: string;
 
   public dateAccessor = (value): string => {
-    return moment(value.date).format('YYYY MMM DD');
+    return moment(value.date).format(this.dateFormat);
   };
 
   /**
@@ -52,9 +52,9 @@ export class TransactionsByContactsTableRows {
     const columns = [
       {
         key: 'openingBalanceLabel',
-        value: this.i18n.t('Opening balance') as string,
+        value: this.i18n.t('transactions_by_contact.opening_balance') as string,
       },
-      ...R.repeat({ key: 'empty', value: '' }, 5),
+      ...Array(5).fill({ key: 'empty', value: '' }),
       {
         key: 'openingBalanceValue',
         accessor: 'openingBalance.formattedAmount',
@@ -76,9 +76,9 @@ export class TransactionsByContactsTableRows {
     const columns = [
       {
         key: 'closingBalanceLabel',
-        value: this.i18n.t('Closing balance') as string,
+        value: this.i18n.t('transactions_by_contact.closing_balance') as string,
       },
-      ...R.repeat({ key: 'empty', value: '' }, 5),
+      ...Array(5).fill({ key: 'empty', value: '' }),
       {
         key: 'closingBalanceValue',
         accessor: 'closingBalance.formattedAmount',

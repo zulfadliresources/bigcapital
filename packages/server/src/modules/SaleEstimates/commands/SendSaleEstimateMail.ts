@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bull';
+import { Queue } from 'bullmq';
 import { Inject, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ContactMailNotification } from '@/modules/MailNotification/ContactMailNotification';
@@ -50,7 +50,7 @@ export class SendSaleEstimateMail {
 
     @InjectQueue(SendSaleEstimateMailQueue)
     private readonly sendEstimateMailQueue: Queue,
-  ) { }
+  ) {}
 
   /**
    * Triggers the reminder mail of the given sale estimate.

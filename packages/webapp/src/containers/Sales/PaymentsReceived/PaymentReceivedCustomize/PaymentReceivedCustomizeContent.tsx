@@ -3,22 +3,23 @@ import {
   ElementCustomize,
   ElementCustomizeContent,
 } from '../../../ElementCustomize/ElementCustomize';
-import { PaymentReceivedCustomizeGeneralField } from './PaymentReceivedCustomizeFieldsGeneral';
+import { initialValues } from './constants';
 import { PaymentReceivedCustomizeContentFields } from './PaymentReceivedCustomizeFieldsContent';
-import {
-  PaymentReceivedCustomizeValues,
-  PaymentReceivedPreviewState,
-} from './types';
+import { PaymentReceivedCustomizeGeneralField } from './PaymentReceivedCustomizeFieldsGeneral';
 import {
   PaymentReceivedPaperTemplate,
   PaymentReceivedPaperTemplateProps,
 } from './PaymentReceivedPaperTemplate';
-import { initialValues } from './constants';
+import {
+  PaymentReceivedCustomizeValues,
+  PaymentReceivedPreviewState,
+} from './types';
+import { Box } from '@/components';
 import { useDrawerContext } from '@/components/Drawer/DrawerProvider';
-import { useDrawerActions } from '@/hooks/state';
 import { BrandingTemplateForm } from '@/containers/BrandingTemplates/BrandingTemplateForm';
-import { useElementCustomizeContext } from '@/containers/ElementCustomize/ElementCustomizeProvider';
 import { useIsTemplateNamedFilled } from '@/containers/BrandingTemplates/utils';
+import { useElementCustomizeContext } from '@/containers/ElementCustomize/ElementCustomizeProvider';
+import { useDrawerActions } from '@/hooks/state';
 
 export function PaymentReceivedCustomizeContent() {
   const { payload, name } = useDrawerContext();
@@ -51,7 +52,9 @@ function PaymentReceivedCustomizeFormContent() {
   return (
     <ElementCustomizeContent>
       <ElementCustomize.PaperTemplate>
-        <PaymentReceivedPaperTemplateFormConnected />
+        <Box overflow="auto" flex="1 1" px={4} py={6}>
+          <PaymentReceivedPaperTemplateFormConnected />
+        </Box>
       </ElementCustomize.PaperTemplate>
 
       <ElementCustomize.FieldsTab id={'general'} label={'General'}>

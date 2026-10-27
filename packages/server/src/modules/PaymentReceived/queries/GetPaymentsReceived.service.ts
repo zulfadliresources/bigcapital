@@ -5,7 +5,7 @@ import { TransformerInjectable } from '@/modules/Transformer/TransformerInjectab
 import { DynamicListService } from '@/modules/DynamicListing/DynamicList.service';
 import { PaymentReceived } from '../models/PaymentReceived';
 import { IFilterMeta, IPaginationMeta } from '@/interfaces/Model';
-import { IPaymentsReceivedFilter } from '../types/PaymentReceived.types';
+import { GetPaymentsReceivedQueryDto } from '../dtos/GetPaymentsReceivedQuery.dto';
 import { TenantModelProxy } from '@/modules/System/models/TenantBaseModel';
 
 @Injectable()
@@ -22,12 +22,12 @@ export class GetPaymentsReceivedService {
 
   /**
    * Retrieve payment receives paginated and filterable list.
-   * @param {IPaymentsReceivedFilter} filterDTO
+   * @param {GetPaymentsReceivedQueryDto} filterDTO
    */
   public async getPaymentReceives(
-    filterDTO: Partial<IPaymentsReceivedFilter>,
+    filterDTO: GetPaymentsReceivedQueryDto,
   ): Promise<{
-    paymentReceives: PaymentReceived[];
+    data: PaymentReceived[];
     pagination: IPaginationMeta;
     filterMeta: IFilterMeta;
   }> {
@@ -53,17 +53,19 @@ export class GetPaymentsReceivedService {
         builder.withGraphFetched('depositAccount');
 
         dynamicList.buildQuery()(builder);
-        _filterDto?.filterQuery && _filterDto.filterQuery(builder as any);
+        if (_filterDto?.filterQuery) {
+          _filterDto.filterQuery(builder as any);
+        }
       })
       .pagination(filter.page - 1, filter.pageSize);
 
     // Transformer the payment receives models to POJO.
-    const transformedPayments = await this.transformer.transform(
+    const data = await this.transformer.transform(
       results,
       new PaymentReceiveTransfromer(),
     );
     return {
-      paymentReceives: transformedPayments,
+      data,
       pagination,
       filterMeta: dynamicList.getResponseMeta(),
     };
