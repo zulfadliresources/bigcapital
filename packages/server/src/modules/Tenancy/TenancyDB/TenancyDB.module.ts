@@ -17,7 +17,8 @@ export const TenancyDatabaseProxyProvider = ClsModule.forFeatureAsync({
   inject: [ConfigService, ClsService],
   useFactory: async (configService: ConfigService, cls: ClsService) => () => {
     const organizationId = cls.get('organizationId');
-    const database = `bigcapital_tenant_${organizationId}`;
+    const dbNamePrefix = configService.get('tenantDatabase.dbNamePrefix');
+    const database = `${dbNamePrefix}${organizationId}`;
     const cachedInstance = lruCache.get(database);
 
     if (cachedInstance) {
