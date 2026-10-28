@@ -18,11 +18,12 @@ Read this before running `git merge develop`.
 | Deploy target | Portainer stack `bigcapital` (local dev **and** VPS) |
 | Images | `ghcr.io/zulfadliresources/bigcapital/{webapp,server,migration}` |
 
-The fork must keep **16 files** different from `develop`. Everything else comes
-from upstream.
+The fork must keep **15 config files** different from `develop`, plus this
+document. Everything else comes from upstream.
 
 ```bash
-# Show exactly what we diverge on. Should list the same 16 files as §2.
+# Show exactly what we diverge on. Expect the 15 files in §2 plus this
+# document = 16 paths.
 git diff --name-only develop HEAD
 ```
 
@@ -31,7 +32,7 @@ whether it belongs in §2 or should be reverted to upstream.
 
 ---
 
-## 2. Files we must keep (16)
+## 2. Files we must keep (15 + this doc)
 
 ### 2.1 Local-only — do not exist upstream
 
@@ -43,7 +44,6 @@ whether it belongs in §2 or should be reverted to upstream.
 | `docker-compose-zrprod-ghcr-hostdb.vps.yml` | VPS overlay: host backup path, retention, cron schedule |
 | `docker-compose-zrprod-ghcr.yml` | Self-contained variant (bundled MariaDB/Redis) |
 | `docker-compose-zrprod-ghcr.vps.yml` | VPS overlay for the self-contained variant |
-| `docker-compose-zrprod-ghcr_old.yml` | Archive of the previous stack; unused |
 | `docker-compose.zr.local.yml` | Early local-only compose; unused by the current stack |
 | `backups/manual_backup.sh` | Ad-hoc dump helper |
 | `backups/restore_mysql.sh` | Restore helper |
@@ -78,6 +78,18 @@ These are the boot blockers that cost hours. Verify each one after a merge.
 Note the spelling: the code reads `TENANT_DB_NAME_PERFIX` (upstream typo).
 Keep it. Do not "fix" it to `PREFIX` — nothing reads that name.
 
+### 2.4 Never merge or rename `ee/` and `EE/`
+
+Two directories, one letter apart, both live in production:
+
+| Directory | Contents | Registered as |
+|---|---|---|
+| `packages/server/src/modules/ee/` | `Workspaces/*` | `WorkspacesModule` |
+| `packages/server/src/modules/EE/` | `AuditLogs/*`, `BillLandedCosts/*`, `EE.module.ts` | `EEModule` |
+
+Both appear in `App.module.ts` `imports[]`. Deleting or merging either breaks
+feature registration. See §4 for the macOS build consequence.
+
 ---
 
 ## 3. Sync procedure
@@ -105,13 +117,13 @@ git merge upstream/develop
 ```
 
 Expect conflicts in `packages/{server,webapp}` and possibly `.gitignore`.
-Resolve in favour of upstream for everything **except** the 16 files in §2:
+Resolve in favour of upstream for everything **except** the 15 files in §2:
 
 ```bash
 # 1. Take upstream for all conflicted files...
 git checkout --theirs -- $(git diff --name-only --diff-filter=U)
 
-# 2. ...then restore our 16 files from the backup branch.
+# 2. ...then restore our 15 files from the backup branch.
 git checkout <backup-branch> -- \
   .github/workflows/publish-zr-images.yml \
   scripts/publish-zr-images.sh \
@@ -124,7 +136,6 @@ git checkout <backup-branch> -- \
   docker-compose.zrprod-ghcr-hostdb.vps.yml \
   docker-compose.zrprod-ghcr.yml \
   docker-compose.zrprod-ghcr.vps.yml \
-  docker-compose.zrprod-ghcr_old.yml \
   docker-compose.zr.local.yml \
   docker/migration/Dockerfile \
   packages/webapp/nginx/sites/default.conf \
@@ -150,7 +161,7 @@ patch that upstream already made.
 ### 3.3 Verify the merge
 
 ```bash
-# Should be exactly the 16 files from §2.
+# Should be the 15 files from §2 plus UPSTREAM_SYNC.md.
 git diff --name-only develop HEAD
 
 # Compose must still resolve.
@@ -201,6 +212,36 @@ packages/server/src/modules/ee   →  23 files  (Workspaces)
 packages/server/src/modules/EE   →  52 files  (AuditLogs, BillLandedCosts, EE.module.ts)
 ```
 
+**Both are used in production.** This is not a duplicate — they hold different
+features, and `App.module.ts` registers both:
+
+```ts
+// line 85
+import { WorkspacesModule } from '../ee/Workspaces/Workspaces.module';
+// line 107
+import { EEModule } from '../EE/EE.module';
+
+// imports[]
+WorkspacesModule,   // line 248
+EEModule,           // line 263
+```
+
+| Directory | Contents | Registered as |
+|---|---|---|
+| `ee/` (lowercase) | `Workspaces/*` — multi-org workspace switching | `WorkspacesModule` |
+| `EE/` (uppercase) | `AuditLogs/*`, `BillLandedCosts/*`, `EE.module.ts` | `EEModule` (wraps the two) |
+
+Verified in the running container — both survive the Linux build:
+
+```
+$ docker exec bigcapital-server sh -c 'ls -d packages/server/dist/modules/ee packages/server/dist/modules/EE'
+packages/server/dist/modules/ee
+packages/server/dist/modules/EE
+```
+
+So **never delete or merge either one.** They are not duplicates and removing
+either breaks feature registration at boot.
+
 Linux keeps both. macOS (APFS, case-insensitive) merges them into a single
 `EE` directory, so `import ... from '../ee/Workspaces/...'` fails with:
 
@@ -212,7 +253,20 @@ error TS2307: Cannot find module '../ee/Workspaces/Workspaces.module'
 behave like CI. Never build with a plain working-tree context on macOS.
 
 This also means: **a local `pnpm run dev:server` may hit the same TS2307.** If it
-does, that is the cause, not your change.
+does, that is the cause, not your change. Options on macOS:
+
+```bash
+# A. Build/run in Docker (always correct)
+docker build -f packages/server/Dockerfile -t bigcapital-server:local - < <(git archive HEAD)
+
+# B. Keep a case-sensitive scratch clone for local development
+diskutil apfs addVolume disk1 APFS caseSensitive --mountpoint /Volumes/cs
+git clone . /Volumes/cs/bigcapital && cd /Volumes/cs/bigcapital && pnpm install
+```
+
+Do **not** "fix" it by renaming the upstream directories — that reintroduces a
+conflict on every upstream sync and breaks the `WorkspacesModule` /
+`EEModule` split described above.
 
 ---
 
@@ -380,8 +434,9 @@ workflow file to trigger registration after enabling.
 
 ### 7.7 `TS2307: Cannot find module '../ee/Workspaces/...'`
 
-macOS merged `ee/` and `EE/`. Build with `git archive` (§4). Do not "fix" it by
-renaming upstream directories — that reintroduces the conflict on every sync.
+macOS merged `ee/` and `EE/`. Build with `git archive` (§4), or use a
+case-sensitive volume. Do not rename upstream directories — both are live
+modules (§2.4) and a rename reintroduces the conflict on every sync.
 
 ---
 
@@ -407,7 +462,7 @@ and add it to §2 — do not patch silently.
 ## 9. Quick reference
 
 ```bash
-# divergence from upstream (expect 16 files)
+# divergence from upstream (expect 16 paths: 15 config files + this doc)
 git diff --name-only develop HEAD
 
 # upstream commits not yet merged
@@ -418,7 +473,7 @@ git branch ghcrlocal-backup-$(date +%Y%m%d) ghcrlocal
 
 # merge, keeping our files
 git merge upstream/develop
-git checkout <backup> -- <the 16 files>
+git checkout <backup> -- <the 15 files>
 git add -A && git commit
 
 # publish
