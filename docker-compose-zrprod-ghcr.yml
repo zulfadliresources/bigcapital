@@ -193,7 +193,7 @@ services:
 
   webapp:
     container_name: bigcapital-webapp
-    image: ghcr.io/bigcapitalhq/webapp:latest
+    image: ${ZR_IMAGE_REGISTRY:-ghcr.io/zulfadliresources/bigcapital}/webapp:${ZR_IMAGE_TAG:-latest}
     restart: on-failure
     expose:
       - '80'
@@ -202,7 +202,7 @@ services:
 
   server:
     container_name: bigcapital-server
-    image: ghcr.io/bigcapitalhq/server:latest
+    image: ${ZR_IMAGE_REGISTRY:-ghcr.io/zulfadliresources/bigcapital}/server:${ZR_IMAGE_TAG:-latest}
     restart: on-failure
     expose:
       - '3000'
@@ -235,6 +235,11 @@ services:
 
       # Redis
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+      # Queue (BullMQ)
+      - QUEUE_HOST=redis
+      - QUEUE_PORT=6379
 
       # System database
       - SYSTEM_DB_NAME=${SYSTEM_DB_NAME}
@@ -243,7 +248,7 @@ services:
       - TENANT_DB_NAME_PERFIX=${TENANT_DB_NAME_PREFIX}
 
       # Authentication
-      - JWT_SECRET=${JWT_SECRET}
+      - APP_JWT_SECRET=${APP_JWT_SECRET:?APP_JWT_SECRET is required - generate one with openssl rand -base64 48}
 
       # MongoDB
       - MONGODB_DATABASE_URL=mongodb://mongo/bigcapital
@@ -264,8 +269,10 @@ services:
       - SIGNUP_EMAIL_CONFIRMATION=${SIGNUP_EMAIL_CONFIRMATION}
 
       # Gotenberg (Pdf generator)
-      - GOTENBERG_URL=${GOTENBERG_URL}
-      - GOTENBERG_DOCS_URL=${GOTENBERG_DOCS_URL}
+      # The gotenberg image listens on 3000 inside the network; the public
+      # 9003 mapping is only for host access.
+      - GOTENBERG_URL=http://gotenberg:3000
+      - GOTENBERG_DOCS_URL=http://server:3000/public/
 
       # Exchange Rate
       - EXCHANGE_RATE_SERVICE=${EXCHANGE_RATE_SERVICE}
@@ -295,12 +302,14 @@ services:
       - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
       - NEW_RELIC_APP_NAME=${NEW_RELIC_APP_NAME}
 
-      # S3
-      - S3_REGION=${S3_REGION}
+      # S3 (attachments/document storage). The bucket is mandatory: the server
+      # crashes on boot with "bucket is required" when it is empty.
+      - S3_REGION=${S3_REGION:-us-east-1}
       - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
       - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_BUCKET=${S3_BUCKET}
+      - S3_BUCKET=${S3_BUCKET:-bigcapital}
+      - S3_FORCE_PATH_STYLE=${S3_FORCE_PATH_STYLE:-false}
       
       # Stripe
       - STRIPE_PAYMENT_SECRET_KEY=${STRIPE_PAYMENT_SECRET_KEY}
@@ -341,9 +350,7 @@ services:
 
   database_migration:
     container_name: bigcapital-database-migration
-    build:
-      context: ./
-      dockerfile: docker/migration/Dockerfile
+    image: ${ZR_IMAGE_REGISTRY:-ghcr.io/zulfadliresources/bigcapital}/migration:${ZR_IMAGE_TAG:-latest}
     environment:
       # Database
       - DB_HOST=mysql
@@ -398,7 +405,7 @@ services:
   gotenberg:
     image: gotenberg/gotenberg:7
     expose:
-      - '9003'
+      - '3000'
     networks:
       - bigcapital_network
 
