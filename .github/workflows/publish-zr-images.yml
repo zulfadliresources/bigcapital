@@ -124,3 +124,6 @@ jobs:
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
+
+# NOTE: GitHub Actions must be enabled in repo Settings -> Actions.
+# When it is disabled the push event is ignored and no images are published.
